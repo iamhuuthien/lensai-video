@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>LensAI Pro — Giải thích & Mở rộng Kiến thức Video</title>
+
+  <!-- Cấu hình PWA cho iOS & Android & Desktop -->
+  <link rel="manifest" href="/static/manifest.json" />
+  <link rel="icon" type="image/svg+xml" href="/static/icon.svg" />
+  <link rel="apple-touch-icon" href="/static/icon.svg" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LensAI Video" />
+  <meta name="theme-color" content="#0b0f19" />
+
+  <link rel="stylesheet" href="/static/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Thanh tiêu đề -->
+    <header class="app-header">
+      <div class="brand">
+        <img src="/static/icon.svg" alt="LensAI" class="brand-icon" />
+        <div>
+          <div class="brand-title">
+            LensAI
+            <span class="badge-ai">Gemini Pro • Deep-Dive</span>
+          </div>
+          <div class="brand-subtitle">Tìm đoạn hướng dẫn trọng tâm, lưu video theo tên & mở rộng kiến thức chuyên sâu</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-btn" id="openShortcutModalBtn" title="Hướng dẫn gắn lên nút Chia sẻ của iOS">
+          📱 <span>Phím tắt iOS</span>
+        </button>
+        <button class="icon-btn" id="openSettingsModalBtn" title="Cấu hình Gemini API Key">
+          <span class="status-dot" id="apiKeyStatusDot"></span>
+          ⚙️ <span>API Key</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Khung nhập Link & Chọn chế độ phân tích -->
+    <section class="card">
+      <div class="url-input-group">
+        <div class="input-wrapper">
+          <span class="platform-pill" id="platformBadge">🔗 Link</span>
+          <input
+            type="url"
+            id="videoUrlInput"
+            class="url-input"
+            placeholder="Dán link TikTok, Facebook Reels hoặc YouTube Shorts vào đây..."
+            autocomplete="off"
+          />
+          <button class="clear-input-btn" id="clearInputBtn" title="Xóa">✕</button>
+        </div>
+        <button class="paste-btn" id="pasteBtn" type="button">📋 Dán nhanh</button>
+      </div>
+
+      <!-- Chọn chế độ AI -->
+      <div class="mode-selector" id="modeSelector">
+        <button type="button" class="mode-btn active" data-mode="explain">
+          ✨ Giải thích & Mở rộng sâu
+        </button>
+        <button type="button" class="mode-btn" data-mode="transcript">
+          📝 Lời thoại & Chữ trên hình
+        </button>
+        <button type="button" class="mode-btn" data-mode="meme">
+          😂 Giải thích Meme / Trend
+        </button>
+        <button type="button" class="mode-btn" data-mode="factcheck">
+          🔍 Kiểm chứng & Chuyên sâu
+        </button>
+      </div>
+
+      <!-- Yêu cầu tùy chỉnh & Nút Phân tích -->
+      <div class="custom-prompt-row">
+        <input
+          type="text"
+          id="customPromptInput"
+          class="custom-prompt-input"
+          placeholder="Câu hỏi riêng (tùy chọn): VD: 'Hướng dẫn chi tiết cách áp dụng công cụ trong video'..."
+        />
+        <button type="button" class="analyze-btn" id="analyzeBtn">
+          <span>🚀 AI Xem & Phân tích Sâu</span>
+        </button>
+      </div>
+
+      <!-- Trạng thái đang tải & phân tích -->
+      <div class="loading-box" id="loadingBox">
+        <div class="spinner"></div>
+        <div class="loading-step" id="loadingStepText">Đang tải & lưu video theo tên + mã phiên...</div>
+        <div class="loading-sub">Model Pro đang dò tìm đoạn hướng dẫn trọng tâm và mở rộng phân tích chuyên sâu về chủ đề</div>
+      </div>
+    </section>
+
+    <!-- Thông báo lỗi -->
+    <div class="error-banner" id="errorBanner"></div>
+
+    <!-- Khu vực Kết quả: Cột trái Video, Cột phải Giải thích & Chat -->
+    <section class="result-layout" id="resultLayout">
+      <!-- Cột Video Preview & Thông tin File đã lưu -->
+      <div class="card">
+        <div class="video-player-wrap">
+          <video id="videoPlayer" controls playsinline preload="metadata"></video>
+        </div>
+        <div class="video-meta-title" id="videoTitle">Tiêu đề video</div>
+        <div class="video-meta-info">
+          <span class="meta-tag" id="videoPlatformTag">TikTok</span>
+          <span class="meta-tag" id="videoUploaderTag">@channel</span>
+          <span class="meta-tag" id="videoDurationTag">0s</span>
+        </div>
+
+        <!-- Hộp hiển thị Tên File Video + Session đã lưu trong thư mục -->
+        <div class="saved-file-box" id="savedFileBox">
+          <div class="saved-file-label">📁 Đã lưu vào thư mục <code>saved_videos/</code>:</div>
+          <div class="saved-file-name" id="savedFileName">Ten_Video__session.mp4</div>
+          <div style="display: flex; gap: 0.5rem; margin-top: 0.45rem; flex-wrap: wrap;">
+            <button type="button" class="chip-btn" id="copyFilenameBtn">📋 Chép tên file</button>
+            <a id="originalVideoLink" href="#" target="_blank" rel="noopener" class="chip-btn" style="text-decoration: none;">
+              ↗ Mở link gốc
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cột Giải thích của AI & Hỏi đáp tiếp -->
+      <div class="card">
+        <div class="explanation-header">
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <span style="font-weight: 700; font-size: 1.05rem;">🤖 Phân tích & Mở rộng Chuyên sâu</span>
+            <span class="model-badge" id="modelUsedBadge">🧠 Gemini Pro</span>
+          </div>
+          <button class="icon-btn" id="copyExplanationBtn" type="button">📄 Sao chép</button>
+        </div>
+
+        <!-- Khung nổi bật: Đoạn hướng dẫn trọng tâm khớp với tiêu đề nhất -->
+        <div class="key-segment-banner" id="keySegmentBanner" style="display: none;">
+          <div class="key-segment-info">
+            <div class="key-segment-title">
+              🎯 Đoạn hướng dẫn trọng tâm nhất trong video:
+              <span class="key-segment-time" id="keySegmentTime">00:00 - 00:00</span>
+            </div>
+            <div class="key-segment-desc" id="keySegmentDesc"></div>
+          </div>
+          <button type="button" class="jump-segment-btn" id="jumpSegmentBtn">
+            ▶️ Tua tới đoạn này
+          </button>
+        </div>
+
+        <div class="markdown-body" id="explanationContent"></div>
+
+        <!-- Hỏi đáp tiếp cùng AI về video này -->
+        <div class="chat-section">
+          <div class="chat-title">💬 Đào sâu thêm với AI về chủ đề & video này</div>
+          <div class="quick-chips">
+            <button type="button" class="chip-btn" data-question="Hướng dẫn chi tiết từng bước thực hành từ A-Z chủ đề trong video cho người mới bắt đầu">
+              🛠️ Hướng dẫn thực hành từ A-Z
+            </button>
+            <button type="button" class="chip-btn" data-question="Phân tích sâu hơn nguyên lý hoạt động và các công cụ thay thế tốt nhất hiện nay cho chủ đề này">
+              🧠 Mở rộng công cụ & nguyên lý
+            </button>
+            <button type="button" class="chip-btn" data-question="Dịch toàn bộ lời nói và chữ xuất hiện trên màn hình sang tiếng Việt">
+              🌐 Dịch lời nói & chữ trên hình
+            </button>
+            <button type="button" class="chip-btn" data-question="Có những sai lầm hoặc lưu ý thực tế nào mà video chưa nhắc tới?">
+              ⚠️ Lưu ý thực tế bị ẩn
+            </button>
+          </div>
+
+          <div class="chat-messages" id="chatMessages"></div>
+
+          <div class="chat-input-row">
+            <input
+              type="text"
+              id="chatInput"
+              class="chat-input"
+              placeholder="Hỏi bất cứ chi tiết nào hoặc nhờ AI mở rộng thêm..."
+            />
+            <button type="button" class="chat-send-btn" id="chatSendBtn">Gửi</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Kho Video đã lưu trong thư mục & Lịch sử -->
+    <section class="card" id="historyCard" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-weight: 700; font-size: 0.96rem;">🗂️ Video đã lưu & Phân tích gần đây</div>
+        <button class="icon-btn" id="clearHistoryBtn" style="padding: 0.3rem 0.65rem; font-size: 0.76rem;">Xóa lịch sử</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </section>
+  </div>
+
+  <!-- Modal Cài đặt Gemini API Key -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem;">⚙️ Cấu hình Gemini API Key</h3>
+        <button class="icon-btn" id="closeSettingsModalBtn">✕</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 0.85rem;">
+        Hệ thống tự động ưu tiên dòng <strong>Google Gemini Pro</strong> mạnh nhất để vừa xem hình ảnh, nghe âm thanh, tìm đoạn hướng dẫn trọng tâm vừa mở rộng kiến thức chuyên sâu.
+      </p>
+      <div style="margin-bottom: 0.85rem;">
+        <label style="display: block; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.35rem;">
+          Gemini API Key (Lấy tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color: #a5b4fc;">Google AI Studio</a>):
+        </label>
+        <input
+          type="password"
+          id="apiKeyInput"
+          class="custom-prompt-input"
+          style="width: 100%;"
+          placeholder="AIzaSy..."
+        />
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+        <button class="analyze-btn" id="saveApiKeyBtn" style="padding: 0.65rem 1.2rem; font-size: 0.88rem;">
+          Lưu cài đặt
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Hướng dẫn tích hợp iOS Shortcuts & Cài đặt App -->
+  <div class="modal-backdrop" id="shortcutModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 1.1rem;">📱 Dùng trên iPhone (iOS) & Mọi thiết bị</h3>
+        <button class="icon-btn" id="closeShortcutModalBtn">✕</button>
+      </div>
+
+      <div style="font-size: 0.88rem; color: #e2e8f0; line-height: 1.65;">
+        <p style="margin-bottom: 0.75rem;">
+          <strong>Cách 1: Cài Web App ra Màn hình chính iPhone (PWA)</strong><br />
+          Mở trang này bằng <strong>Safari</strong> trên iOS $\rightarrow$ bấm nút <strong>Chia sẻ (Share)</strong> $\rightarrow$ chọn <strong>"Thêm vào MH chính" (Add to Home Screen)</strong>.
+        </p>
+
+        <p style="margin-bottom: 0.5rem;">
+          <strong>Cách 2: Gắn vào nút "Chia sẻ" khi đang lướt TikTok / Reels (Apple Shortcuts)</strong><br />
+          Tạo 1 Phím tắt (Shortcut) trên iOS nhận <em>URL từ Bảng chia sẻ (Share Sheet)</em>:
+        </p>
+        <ul style="margin-left: 1.2rem; margin-bottom: 0.75rem;">
+          <li>
+            <strong>Mở thẳng Web App và tự động phân tích:</strong><br />
+            Dùng hành động <em>"Mở URL" (Open URLs)</em> tới địa chỉ:
+            <div class="code-block" id="shortcutWebUrlExample">http://localhost:8000/?url=[Đầu vào Phím tắt]</div>
+          </li>
+          <li>
+            <strong>Hiện bảng giải thích đè ngay trên màn hình TikTok/Reels:</strong><br />
+            Dùng hành động <em>"Lấy nội dung của URL" (Get Contents of URL)</em> gọi <code>POST</code> tới:
+            <div class="code-block" id="shortcutApiUrlExample">http://localhost:8000/api/shortcut</div>
+            Body JSON: <code>{"url": "[Đầu vào Phím tắt]"}</code> $\rightarrow$ lấy khóa <code>plain_text</code> $\rightarrow$ hiển thị bằng <em>"Hiển thị kết quả" (Show Result)</em>.
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

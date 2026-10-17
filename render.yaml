@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: lensai-video-explainer
+    runtime: docker
+    plan: free
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: PORT
+        value: 8000
