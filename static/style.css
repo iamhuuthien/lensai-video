@@ -132,6 +132,8 @@ body {
 
 /* Card */
 .card {
+  min-width: 0;
+  overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
@@ -564,16 +566,19 @@ body {
 }
 
 .history-item {
+  min-width: 0;
+  overflow: hidden;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 0.75rem;
+  padding: 0.8rem 0.9rem;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
 .history-item:hover {
   border-color: var(--accent);
+  background: var(--bg-card-hover);
 }
 
 .history-item-title {
@@ -582,12 +587,20 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
 }
 
 .history-item-sub {
   font-size: 0.76rem;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-item-sub code {
+  color: #a5b4fc;
+  font-size: 0.74rem;
 }
 
 /* Modals */
