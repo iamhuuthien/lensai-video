@@ -16,3 +16,4 @@ serviceAccount*.json
 *-firebase-adminsdk-*.json
 *.pem
 .firebase/
+pro_data/
