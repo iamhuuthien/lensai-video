@@ -1,5 +1,6 @@
 import os
 import re
+import asyncio
 import logging
 from pathlib import Path
 from typing import Optional
@@ -79,9 +80,20 @@ async def health_check():
     }
 
 
+def _saved_listing_enabled() -> bool:
+    return os.environ.get("LENSAI_ENABLE_SAVED_LISTING", "").strip().lower() in ("1", "true", "yes")
+
+
 @app.get("/api/saved")
 async def list_saved_videos():
-    """Liệt kê tất cả video đã lưu trong thư mục saved_videos/ kèm tên file và session_id."""
+    """
+    Liệt kê video đã lưu trong saved_videos/ kèm tên file và session_id.
+    Mặc định TẮT vì trên server nhiều người dùng nó sẽ lộ video của mọi người.
+    Bật cho máy cá nhân bằng LENSAI_ENABLE_SAVED_LISTING=1.
+    """
+    if not _saved_listing_enabled():
+        raise HTTPException(status_code=404, detail="Not found")
+
     items = []
     for mp4_file in sorted(SAVED_VIDEOS_DIR.glob("*.mp4"), key=lambda p: p.stat().st_mtime, reverse=True):
         stem = mp4_file.stem
@@ -107,21 +119,11 @@ async def get_features():
     return extensions.public_features()
 
 
-@app.post("/api/analyze")
-async def api_analyze_video(req: AnalyzeRequest, request: Request):
-    """
-    1. Tải video và lưu vào saved_videos/<Ten_Video>__<session_id>.mp4
-    2. Dùng Gemini Pro tìm đoạn hướng dẫn trọng tâm [MM:SS - MM:SS] & mở rộng phân tích chuyên sâu
-    3. Lưu kèm file bài phân tích .md cùng tên trong thư mục saved_videos/
-    """
-    if not req.url or not req.url.strip():
-        raise HTTPException(status_code=400, detail="Vui lòng nhập đường link video hợp lệ.")
-
-    await extensions.run_before(request, "analyze", req)
-
+async def _run_analysis(req: AnalyzeRequest) -> dict:
+    """Phần xử lý nặng của /api/analyze. Các lời gọi chặn (yt-dlp, Gemini) chạy trong thread riêng."""
     try:
         logger.info(f"Đang tải và lưu video từ URL: {req.url}")
-        video_info = download_and_extract_video(req.url)
+        video_info = await asyncio.to_thread(download_and_extract_video, req.url)
     except Exception as e:
         logger.error(f"Lỗi khi tải video: {e}")
         raise HTTPException(
@@ -136,7 +138,8 @@ async def api_analyze_video(req: AnalyzeRequest, request: Request):
         logger.info(
             f"Đã lưu file '{video_info['filename']}'. Đang gửi sang Gemini (ưu tiên Pro) phân tích..."
         )
-        ai_result = analyze_video_with_ai(
+        ai_result = await asyncio.to_thread(
+            analyze_video_with_ai,
             video_info=video_info,
             mode=req.mode,
             custom_prompt=req.prompt,
@@ -156,7 +159,7 @@ async def api_analyze_video(req: AnalyzeRequest, request: Request):
     md_path = save_analysis_markdown(video_info, explanation, model_used)
 
     session_id = video_info["session_id"]
-    response = {
+    return {
         "session_id": session_id,
         "model_used": model_used,
         "key_segment": key_segment,
@@ -177,8 +180,49 @@ async def api_analyze_video(req: AnalyzeRequest, request: Request):
         "mode": req.mode,
         "explanation": explanation,
     }
+
+
+@app.post("/api/analyze")
+async def api_analyze_video(req: AnalyzeRequest, request: Request):
+    """
+    1. Tải video và lưu vào saved_videos/<Ten_Video>__<session_id>.mp4
+    2. Dùng Gemini Pro tìm đoạn hướng dẫn trọng tâm [MM:SS - MM:SS] & mở rộng phân tích chuyên sâu
+    3. Lưu kèm file bài phân tích .md cùng tên trong thư mục saved_videos/
+    """
+    if not req.url or not req.url.strip():
+        raise HTTPException(status_code=400, detail="Vui lòng nhập đường link video hợp lệ.")
+
+    await extensions.run_before(request, "analyze", req)
+    try:
+        response = await _run_analysis(req)
+    except BaseException as exc:
+        await extensions.run_error(request, "analyze", exc)
+        raise
     await extensions.run_after(request, "analyze", response)
     return response
+
+
+async def _run_chat(req: ChatRequest) -> dict:
+    try:
+        chat_res = await asyncio.to_thread(
+            chat_about_video,
+            session_id=req.session_id,
+            question=req.question,
+            api_key=req.api_key,
+        )
+        return {
+            "session_id": req.session_id,
+            "question": req.question,
+            "answer": chat_res["answer"],
+            "model_used": chat_res["model_used"],
+        }
+    except KeyError as ke:
+        raise HTTPException(status_code=404, detail=str(ke))
+    except ValueError as ve:
+        raise HTTPException(status_code=401, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Lỗi khi chat về video: {e}")
+        raise HTTPException(status_code=500, detail=f"Lỗi khi trả lời câu hỏi: {str(e)}")
 
 
 @app.post("/api/chat")
@@ -188,28 +232,13 @@ async def api_chat_video(req: ChatRequest, request: Request):
         raise HTTPException(status_code=400, detail="Vui lòng nhập câu hỏi.")
 
     await extensions.run_before(request, "chat", req)
-
     try:
-        chat_res = chat_about_video(
-            session_id=req.session_id,
-            question=req.question,
-            api_key=req.api_key,
-        )
-        response = {
-            "session_id": req.session_id,
-            "question": req.question,
-            "answer": chat_res["answer"],
-            "model_used": chat_res["model_used"],
-        }
-        await extensions.run_after(request, "chat", response)
-        return response
-    except KeyError as ke:
-        raise HTTPException(status_code=404, detail=str(ke))
-    except ValueError as ve:
-        raise HTTPException(status_code=401, detail=str(ve))
-    except Exception as e:
-        logger.error(f"Lỗi khi chat về video: {e}")
-        raise HTTPException(status_code=500, detail=f"Lỗi khi trả lời câu hỏi: {str(e)}")
+        response = await _run_chat(req)
+    except BaseException as exc:
+        await extensions.run_error(request, "chat", exc)
+        raise
+    await extensions.run_after(request, "chat", response)
+    return response
 
 
 @app.post("/api/shortcut")

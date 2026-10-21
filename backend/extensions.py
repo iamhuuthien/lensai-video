@@ -16,11 +16,13 @@ Contract for an extension module::
         ext.set_frontend_script("/static/pro/pro.js")   # optional UI add-on
         ext.add_before_hook(check_access)                # async or sync
         ext.add_after_hook(charge_credits)               # async or sync
+        ext.add_error_hook(refund_credits)               # async or sync
 
 Hook signatures::
 
     before(request, action, payload) -> None   # raise HTTPException to block the call
     after(request, action, result)   -> None   # errors are logged, never break the response
+    error(request, action, exc)      -> None   # request failed after `before` passed (e.g. refund)
 
 ``action`` is ``"analyze"`` or ``"chat"``.
 """
@@ -44,6 +46,7 @@ class Extensions:
         self.frontend_script: Optional[str] = None
         self._before: List[Hook] = []
         self._after: List[Hook] = []
+        self._error: List[Hook] = []
 
     # ---- registration API (used by extension modules) ----
     def set_feature(self, name: str, value: Any = True) -> None:
@@ -57,6 +60,9 @@ class Extensions:
 
     def add_after_hook(self, fn: Hook) -> None:
         self._after.append(fn)
+
+    def add_error_hook(self, fn: Hook) -> None:
+        self._error.append(fn)
 
     # ---- invocation API (used by the core) ----
     async def run_before(self, request: Request, action: str, payload: Any) -> None:
@@ -74,6 +80,16 @@ class Extensions:
                     await out
             except Exception:
                 logger.exception("After-hook failed (ignored)")
+
+    async def run_error(self, request: Request, action: str, exc: BaseException) -> None:
+        """Called when processing failed AFTER the before-hooks passed."""
+        for fn in self._error:
+            try:
+                out = fn(request, action, exc)
+                if inspect.isawaitable(out):
+                    await out
+            except Exception:
+                logger.exception("Error-hook failed (ignored)")
 
     def public_features(self) -> Dict[str, Any]:
         return {"features": self.features, "frontend_script": self.frontend_script}

@@ -2,12 +2,21 @@ const STORAGE_KEY_API = "lensai_gemini_api_key";
 const STORAGE_KEY_HISTORY = "lensai_video_history";
 
 // Extension surface: an optional add-on script (loaded from /api/features) can set
-// window.LensAI.headers (e.g. an access pass) which are merged into every API call.
+// window.LensAI.headers (e.g. an access pass) which are merged into every API call,
+// and window.LensAI.onApiResponse(url, response) to react to responses (e.g. HTTP 402).
 window.LensAI = window.LensAI || { headers: {} };
 
-function apiFetch(url, options = {}) {
+async function apiFetch(url, options = {}) {
   const headers = { ...(options.headers || {}), ...window.LensAI.headers };
-  return fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
+  if (typeof window.LensAI.onApiResponse === "function") {
+    try {
+      window.LensAI.onApiResponse(url, res.clone());
+    } catch (err) {
+      console.warn("LensAI.onApiResponse failed:", err);
+    }
+  }
+  return res;
 }
 
 async function loadExtensionScript() {

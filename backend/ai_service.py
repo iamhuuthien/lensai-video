@@ -1,6 +1,8 @@
 import os
 import re
 import time
+import hashlib
+import threading
 import logging
 from typing import Dict, Any, List, Optional, Tuple
 from google import genai
@@ -26,7 +28,10 @@ FALLBACK_FLASH_MODELS: List[str] = [
     "gemini-3.0-flash",
 ]
 
-_CACHED_AVAILABLE_MODELS: List[str] = []
+# Cache danh sách model theo từng API key, và thời điểm model được dùng lại sau khi bị lỗi.
+_MODELS_CACHE: Dict[str, List[str]] = {}
+_MODEL_COOLDOWN: Dict[Tuple[str, str], float] = {}
+_state_lock = threading.Lock()
 
 KEY_SEGMENT_INSTRUCTION = """
 QUAN TRỌNG: Ngay dòng đầu tiên của câu trả lời, bạn BẮT BUỘC phải xuất ra 1 dòng đánh dấu đoạn thời gian giá trị nhất trong video (nơi tác giả thực sự hướng dẫn hoặc đi vào trọng tâm của tiêu đề, bỏ qua phần mở đầu câu giờ) theo đúng định dạng sau:
@@ -97,18 +102,35 @@ def get_genai_client(api_key: Optional[str] = None) -> genai.Client:
             "Chưa có GEMINI_API_KEY. Vui lòng nhập Gemini API Key trong phần Cài đặt (⚙️ API Key) "
             "hoặc thiết lập biến môi trường GEMINI_API_KEY."
         )
-    return genai.Client(api_key=key)
+    client = genai.Client(api_key=key)
+    # Định danh không đảo ngược được của key, dùng để cache danh sách model theo từng key.
+    try:
+        client._lensai_key_id = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
+    except Exception:
+        pass
+    return client
+
+
+def _key_id(client: genai.Client) -> str:
+    return getattr(client, "_lensai_key_id", "")
+
+
+def _model_preference() -> str:
+    """'pro' (mặc định, chất lượng cao nhất) hoặc 'flash' (rẻ và nhanh hơn nhiều)."""
+    return os.environ.get("LENSAI_MODEL_PREFERENCE", "pro").strip().lower()
 
 
 def _discover_ranked_models(client: genai.Client) -> List[str]:
     """
-    Lấy danh sách model khả dụng từ tài khoản Gemini API và sắp xếp ưu tiên:
-    1. Các model dòng PRO mới nhất (VD: gemini-3.8-pro, gemini-3.5-pro...) để phân tích sâu nhất.
-    2. Các model dòng FLASH mới nhất (VD: gemini-3.8-flash) làm dự phòng tốc độ cao.
+    Lấy danh sách model khả dụng từ tài khoản Gemini API và sắp xếp ưu tiên.
+    Mặc định: model dòng PRO trước, FLASH làm dự phòng. Với LENSAI_MODEL_PREFERENCE=flash thì ngược lại.
+    Kết quả được cache theo từng API key.
     """
-    global _CACHED_AVAILABLE_MODELS
-    if _CACHED_AVAILABLE_MODELS:
-        return _CACHED_AVAILABLE_MODELS
+    cache_key = f"{_key_id(client)}:{_model_preference()}"
+    with _state_lock:
+        cached = _MODELS_CACHE.get(cache_key)
+    if cached:
+        return cached
 
     pro_models: List[str] = []
     flash_models: List[str] = []
@@ -128,18 +150,36 @@ def _discover_ranked_models(client: genai.Client) -> List[str]:
     except Exception as e:
         logger.warning(f"Không thể liệt kê danh sách model từ API: {e}")
 
-    # Sắp xếp giảm dần theo tên phiên bản để bản mới nhất (3.8 > 3.5 > 3.0) đứng đầu
+    # Sắp xếp giảm dần theo tên phiên bản để bản mới nhất đứng đầu
     pro_models.sort(reverse=True)
     flash_models.sort(reverse=True)
 
+    if _model_preference() == "flash":
+        ordered = flash_models + FALLBACK_FLASH_MODELS + pro_models + PRIORITY_PRO_MODELS
+    else:
+        ordered = pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS
+
     combined: List[str] = []
-    for candidate in pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS:
+    for candidate in ordered:
         if candidate not in combined:
             combined.append(candidate)
 
-    _CACHED_AVAILABLE_MODELS = combined
-    logger.info(f"Danh sách thứ tự ưu tiên Model AI (Ưu tiên PRO): {_CACHED_AVAILABLE_MODELS[:6]}")
-    return _CACHED_AVAILABLE_MODELS
+    with _state_lock:
+        if len(_MODELS_CACHE) > 200:  # tránh phình bộ nhớ khi có rất nhiều key khác nhau
+            _MODELS_CACHE.clear()
+        _MODELS_CACHE[cache_key] = combined
+    logger.info(f"Thứ tự ưu tiên model ({_model_preference()}): {combined[:6]}")
+    return combined
+
+
+def _cooldown_seconds_for(err: Exception) -> int:
+    """404/403 = model không dùng được với key này (lâu dài); 429 = tạm hết quota; còn lại = lỗi thoáng qua."""
+    code = getattr(err, "code", None)
+    if code in (403, 404):
+        return 1800
+    if code == 429:
+        return 120
+    return 0
 
 
 def _parse_mmss_to_seconds(ts: str) -> int:
@@ -229,9 +269,16 @@ def _generate_with_best_model(
         temperature=0.35,
     )
     ranked_models = _discover_ranked_models(client)
+    key_id = _key_id(client)
+
+    now = time.time()
+    with _state_lock:
+        usable_models = [m for m in ranked_models if _MODEL_COOLDOWN.get((key_id, m), 0) <= now]
+    if not usable_models:
+        usable_models = ranked_models
 
     last_err: Optional[Exception] = None
-    for model_name in ranked_models:
+    for model_name in usable_models:
         try:
             logger.info(f"Đang phân tích video với model: {model_name}")
             response = client.models.generate_content(
@@ -243,6 +290,10 @@ def _generate_with_best_model(
             return text, model_name
         except Exception as err:
             last_err = err
+            cooldown = _cooldown_seconds_for(err)
+            if cooldown:
+                with _state_lock:
+                    _MODEL_COOLDOWN[(key_id, model_name)] = time.time() + cooldown
             logger.warning(f"Model {model_name} không khả dụng ({err}), tự động chuyển sang model tiếp theo...")
 
     if last_err:
