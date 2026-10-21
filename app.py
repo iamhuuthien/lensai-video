@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +16,7 @@ from backend.video_service import (
     SAVED_VIDEOS_DIR,
 )
 from backend.ai_service import analyze_video_with_ai, chat_about_video, SESSIONS
+from backend.extensions import extensions, load_extensions
 
 load_dotenv()
 
@@ -42,6 +43,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Optional private extension (billing, credits, ...). No-op when the module isn't installed.
+load_extensions(app)
 
 
 class AnalyzeRequest(BaseModel):
@@ -97,8 +101,14 @@ async def list_saved_videos():
     return {"saved_dir": str(SAVED_VIDEOS_DIR), "videos": items[:30]}
 
 
+@app.get("/api/features")
+async def get_features():
+    """Cho frontend biết có extension nào đang bật (community mode trả về pro=false)."""
+    return extensions.public_features()
+
+
 @app.post("/api/analyze")
-async def api_analyze_video(req: AnalyzeRequest):
+async def api_analyze_video(req: AnalyzeRequest, request: Request):
     """
     1. Tải video và lưu vào saved_videos/<Ten_Video>__<session_id>.mp4
     2. Dùng Gemini Pro tìm đoạn hướng dẫn trọng tâm [MM:SS - MM:SS] & mở rộng phân tích chuyên sâu
@@ -106,6 +116,8 @@ async def api_analyze_video(req: AnalyzeRequest):
     """
     if not req.url or not req.url.strip():
         raise HTTPException(status_code=400, detail="Vui lòng nhập đường link video hợp lệ.")
+
+    await extensions.run_before(request, "analyze", req)
 
     try:
         logger.info(f"Đang tải và lưu video từ URL: {req.url}")
@@ -144,7 +156,7 @@ async def api_analyze_video(req: AnalyzeRequest):
     md_path = save_analysis_markdown(video_info, explanation, model_used)
 
     session_id = video_info["session_id"]
-    return {
+    response = {
         "session_id": session_id,
         "model_used": model_used,
         "key_segment": key_segment,
@@ -165,13 +177,17 @@ async def api_analyze_video(req: AnalyzeRequest):
         "mode": req.mode,
         "explanation": explanation,
     }
+    await extensions.run_after(request, "analyze", response)
+    return response
 
 
 @app.post("/api/chat")
-async def api_chat_video(req: ChatRequest):
+async def api_chat_video(req: ChatRequest, request: Request):
     """Hỏi thêm các câu hỏi hoặc yêu cầu mở rộng sâu hơn về chủ đề của video."""
     if not req.question or not req.question.strip():
         raise HTTPException(status_code=400, detail="Vui lòng nhập câu hỏi.")
+
+    await extensions.run_before(request, "chat", req)
 
     try:
         chat_res = chat_about_video(
@@ -179,12 +195,14 @@ async def api_chat_video(req: ChatRequest):
             question=req.question,
             api_key=req.api_key,
         )
-        return {
+        response = {
             "session_id": req.session_id,
             "question": req.question,
             "answer": chat_res["answer"],
             "model_used": chat_res["model_used"],
         }
+        await extensions.run_after(request, "chat", response)
+        return response
     except KeyError as ke:
         raise HTTPException(status_code=404, detail=str(ke))
     except ValueError as ve:
@@ -195,7 +213,7 @@ async def api_chat_video(req: ChatRequest):
 
 
 @app.post("/api/shortcut")
-async def api_ios_shortcut(req: ShortcutRequest):
+async def api_ios_shortcut(req: ShortcutRequest, request: Request):
     """Endpoint tối ưu sẵn cho Apple Shortcuts (Phím tắt iOS trên Share Sheet)."""
     result = await api_analyze_video(
         AnalyzeRequest(
@@ -203,7 +221,8 @@ async def api_ios_shortcut(req: ShortcutRequest):
             mode=req.mode,
             prompt=req.prompt,
             api_key=req.api_key,
-        )
+        ),
+        request,
     )
     explanation_md = result["explanation"]
     plain_text = re.sub(r"#{1,6}\s*", "", explanation_md)

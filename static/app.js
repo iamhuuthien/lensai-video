@@ -1,6 +1,34 @@
 const STORAGE_KEY_API = "lensai_gemini_api_key";
 const STORAGE_KEY_HISTORY = "lensai_video_history";
 
+// Extension surface: an optional add-on script (loaded from /api/features) can set
+// window.LensAI.headers (e.g. an access pass) which are merged into every API call.
+window.LensAI = window.LensAI || { headers: {} };
+
+function apiFetch(url, options = {}) {
+  const headers = { ...(options.headers || {}), ...window.LensAI.headers };
+  return fetch(url, { ...options, headers });
+}
+
+async function loadExtensionScript() {
+  try {
+    const res = await fetch("/api/features");
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.frontend_script) {
+      await new Promise((resolve) => {
+        const s = document.createElement("script");
+        s.src = data.frontend_script;
+        s.onload = resolve;
+        s.onerror = resolve; // never block the app if the add-on fails to load
+        document.body.appendChild(s);
+      });
+    }
+  } catch (err) {
+    console.warn("Extension script not loaded:", err);
+  }
+}
+
 let currentMode = "explain";
 let currentSessionId = null;
 let currentExplanationRaw = "";
@@ -252,7 +280,7 @@ async function handleAnalyzeVideo() {
   }, 2600);
 
   try {
-    const res = await fetch("/api/analyze", {
+    const res = await apiFetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -300,7 +328,7 @@ async function handleSendChat(questionText) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
   try {
-    const res = await fetch("/api/chat", {
+    const res = await apiFetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -436,6 +464,7 @@ closeShortcutModalBtn.addEventListener("click", () => {
 
 window.addEventListener("DOMContentLoaded", async () => {
   await checkServerHealth();
+  await loadExtensionScript();
   renderHistory();
 
   const params = new URLSearchParams(window.location.search);

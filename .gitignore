@@ -8,3 +8,11 @@ saved_videos/
 *.mp4
 *.webm
 *.mkv
+
+# Private / monetization code and secrets must never land in the public repo
+lensai_pro/
+static/pro/
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+*.pem
+.firebase/
