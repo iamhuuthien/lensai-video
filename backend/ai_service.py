@@ -413,18 +413,41 @@ def chat_about_video(
     session_id: str,
     question: str,
     api_key: Optional[str] = None,
+    context_fallback: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Trả lời câu hỏi tiếp theo của người dùng về video hoặc mở rộng sâu hơn về chủ đề."""
     session = SESSIONS.get(session_id) or _restore_session_from_disk(session_id)
+    if not session and context_fallback and (context_fallback.get("explanation") or context_fallback.get("title")):
+        prev_exp = str(context_fallback.get("explanation") or "").strip()
+        title = str(context_fallback.get("title") or "Video").strip()
+        platform = str(context_fallback.get("platform") or "Video").strip()
+        uploader = str(context_fallback.get("uploader") or "Tác giả").strip()
+        url = str(context_fallback.get("url") or "").strip()
+        session = {
+            "video_info": {
+                "session_id": session_id,
+                "filename": f"{session_id}.mp4",
+                "video_path": "",
+                "title": title,
+                "platform": platform,
+                "uploader": uploader,
+                "url": url,
+            },
+            "metadata_text": f"- Nền tảng: {platform}\n- Kênh / Tác giả: {uploader}\n- Tiêu đề: {title}\n- URL: {url}",
+            "history": ([{"role": "assistant", "text": prev_exp}] if prev_exp else []),
+            "created_at": time.time(),
+        }
+        SESSIONS[session_id] = session
+
     if not session:
         raise KeyError("Phiên làm việc không tồn tại. Vui lòng bấm phân tích lại video.")
 
     client = get_genai_client(api_key)
     video_info = session["video_info"]
-    video_path = video_info["video_path"]
+    video_path = video_info.get("video_path") or ""
 
     contents: List[Any] = []
-    if os.path.exists(video_path):
+    if video_path and os.path.exists(video_path):
         video_part = _create_video_part(client, video_path)
         contents.append(video_part)
 

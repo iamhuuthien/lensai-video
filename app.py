@@ -60,6 +60,7 @@ class ChatRequest(BaseModel):
     session_id: str
     question: str
     api_key: Optional[str] = None
+    context_fallback: Optional[dict] = None
 
 
 class ShortcutRequest(BaseModel):
@@ -209,6 +210,7 @@ async def _run_chat(req: ChatRequest) -> dict:
             session_id=req.session_id,
             question=req.question,
             api_key=req.api_key,
+            context_fallback=req.context_fallback,
         )
         return {
             "session_id": req.session_id,

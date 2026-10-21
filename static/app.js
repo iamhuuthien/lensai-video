@@ -27,7 +27,8 @@ async function loadExtensionScript() {
     if (data.frontend_script) {
       await new Promise((resolve) => {
         const s = document.createElement("script");
-        s.src = data.frontend_script;
+        const sep = data.frontend_script.includes("?") ? "&" : "?";
+        s.src = `${data.frontend_script}${sep}v=2.3`;
         s.onload = resolve;
         s.onerror = resolve; // never block the app if the add-on fails to load
         document.body.appendChild(s);
@@ -344,6 +345,13 @@ async function handleSendChat(questionText) {
         session_id: currentSessionId,
         question,
         api_key: getStoredApiKey() || null,
+        context_fallback: {
+          title: videoTitle ? videoTitle.textContent : "",
+          platform: videoPlatformTag ? videoPlatformTag.textContent : "",
+          uploader: videoUploaderTag ? videoUploaderTag.textContent : "",
+          url: originalVideoLink ? originalVideoLink.href : "",
+          explanation: currentExplanationRaw || "",
+        },
       }),
     });
     const data = await res.json();
