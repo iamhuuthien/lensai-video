@@ -28,7 +28,7 @@ async function loadExtensionScript() {
       await new Promise((resolve) => {
         const s = document.createElement("script");
         const sep = data.frontend_script.includes("?") ? "&" : "?";
-        s.src = `${data.frontend_script}${sep}v=2.4`;
+        s.src = `${data.frontend_script}${sep}v=2.5`;
         s.onload = resolve;
         s.onerror = resolve; // never block the app if the add-on fails to load
         document.body.appendChild(s);
