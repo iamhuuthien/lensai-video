@@ -1,10 +1,11 @@
 import React from "react";
-import { Paper, Box, Typography, Button, Stack, Chip } from "@mui/material";
+import { Box, Typography, Button, Stack, Chip } from "@mui/material";
 import WhatshotIcon from "@mui/icons-material/Whatshot";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import TimerIcon from "@mui/icons-material/Timer";
 import type { KeySegment } from "../../models/types";
 import { APPLE_PALETTE } from "../../theme/theme";
+import { SpotlightCard } from "../common/SpotlightCard";
 
 interface KeySegmentBannerProps {
   segment: KeySegment;
@@ -13,17 +14,18 @@ interface KeySegmentBannerProps {
 
 export const KeySegmentBanner: React.FC<KeySegmentBannerProps> = ({ segment, onSeek }) => {
   return (
-    <Paper
-      elevation={0}
+    <SpotlightCard
+      spotlightColor="rgba(255, 149, 0, 0.18)"
+      hoverBorderColor="rgba(255, 149, 0, 0.55)"
+      enableScaleHover
       sx={{
         p: { xs: 2.5, sm: 3 },
         mb: 3.5,
         backgroundColor: "rgba(22, 22, 24, 0.95)",
         border: "1px solid rgba(245, 166, 35, 0.35)",
-        borderRadius: "18px",
+        borderRadius: "20px",
         position: "relative",
-        overflow: "hidden",
-        "&::before": {
+        "&::after": {
           content: '""',
           position: "absolute",
           top: 0,
@@ -31,6 +33,7 @@ export const KeySegmentBanner: React.FC<KeySegmentBannerProps> = ({ segment, onS
           right: 0,
           height: "3px",
           background: "linear-gradient(90deg, #ff9500, #ffcc00, #ff3b30)",
+          zIndex: 2,
         },
       }}
     >
@@ -92,9 +95,13 @@ export const KeySegmentBanner: React.FC<KeySegmentBannerProps> = ({ segment, onS
               color: "#000000",
               fontWeight: 600,
               flexShrink: 0,
+              transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
               "&:hover": {
                 backgroundColor: "#ffaa33",
-                boxShadow: "0 4px 16px rgba(255, 149, 0, 0.4)",
+                boxShadow: "0 6px 20px rgba(255, 149, 0, 0.45)",
+              },
+              "&:active": {
+                transform: "scale(0.96)",
               },
             }}
           >
@@ -102,6 +109,6 @@ export const KeySegmentBanner: React.FC<KeySegmentBannerProps> = ({ segment, onS
           </Button>
         )}
       </Stack>
-    </Paper>
+    </SpotlightCard>
   );
 };

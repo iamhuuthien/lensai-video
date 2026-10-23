@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  Paper,
   Box,
   TextField,
   InputAdornment,
@@ -23,6 +22,7 @@ import MovieCreationIcon from "@mui/icons-material/MovieCreation";
 import HistoryIcon from "@mui/icons-material/History";
 import type { AnalysisMode } from "../../models/types";
 import { APPLE_PALETTE } from "../../theme/theme";
+import { SpotlightCard } from "../common/SpotlightCard";
 
 interface UrlInputCardProps {
   url: string;
@@ -63,17 +63,16 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
   };
 
   return (
-    <Paper
-      elevation={0}
+    <SpotlightCard
+      spotlightColor="rgba(0, 113, 227, 0.16)"
+      hoverBorderColor="rgba(41, 151, 255, 0.4)"
       sx={{
         p: { xs: 2.5, sm: 3.5 },
         maxWidth: 840,
         mx: "auto",
         mb: 4,
-        backgroundColor: APPLE_PALETTE.tile1,
-        border: `1px solid ${APPLE_PALETTE.hairlineStrong}`,
-        borderRadius: "20px",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+        borderRadius: "22px",
+        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
       }}
     >
       {/* Search Input Bar */}
@@ -147,10 +146,14 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
                   fontWeight: isSelected ? 600 : 400,
                   fontSize: "0.8125rem",
                   cursor: "pointer",
-                  transition: "all 0.18s ease",
+                  transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
+                  "&:active": {
+                    transform: "scale(0.95)",
+                  },
                   "&:hover": {
                     backgroundColor: isSelected ? APPLE_PALETTE.actionBlueHover : APPLE_PALETTE.tileHover,
                     color: "#ffffff",
+                    borderColor: APPLE_PALETTE.skyLink,
                   },
                 }}
               />
@@ -172,6 +175,10 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
             px: 3,
             fontSize: "0.9375rem",
             fontWeight: 600,
+            transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
+            "&:active": {
+              transform: "scale(0.96)",
+            },
           }}
         >
           {loading ? "Đang xử lý..." : "Phân tích ngay"}
@@ -232,7 +239,9 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
                     backgroundColor: alpha(APPLE_PALETTE.tile3, 0.5),
                     color: APPLE_PALETTE.inkMuted,
                     cursor: "pointer",
-                    "&:hover": { color: "#ffffff", backgroundColor: APPLE_PALETTE.tile3 },
+                    transition: "all 0.15s ease",
+                    "&:hover": { color: "#ffffff", backgroundColor: APPLE_PALETTE.tile3, borderColor: APPLE_PALETTE.skyLink },
+                    "&:active": { transform: "scale(0.96)" },
                   }}
                 />
               );
@@ -240,7 +249,7 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
           </Stack>
         </Box>
       )}
-    </Paper>
+    </SpotlightCard>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Paper,
   Box,
   Typography,
   TextField,
@@ -20,6 +19,7 @@ import PauseIcon from "@mui/icons-material/Pause";
 import { FreeToolsService } from "../../services/freeTools";
 import { ExportService } from "../../services/export";
 import { APPLE_PALETTE } from "../../theme/theme";
+import { SpotlightCard } from "../common/SpotlightCard";
 
 export const StudioTab: React.FC = () => {
   const [script, setScript] = useState<string>(
@@ -46,13 +46,12 @@ export const StudioTab: React.FC = () => {
   return (
     <Box sx={{ maxWidth: 960, mx: "auto", px: 2, py: 3 }}>
       {/* Studio Banner */}
-      <Paper
-        elevation={0}
+      <SpotlightCard
+        spotlightColor="rgba(0, 113, 227, 0.16)"
+        hoverBorderColor="rgba(41, 151, 255, 0.4)"
         sx={{
           p: { xs: 2.5, sm: 3.5 },
           mb: 4,
-          backgroundColor: APPLE_PALETTE.tile1,
-          border: `1px solid ${APPLE_PALETTE.hairline}`,
           borderRadius: "20px",
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
@@ -79,19 +78,18 @@ export const StudioTab: React.FC = () => {
             Bộ công cụ dựng clip tốc độ cao cho TikTok, Reels & CapCut. Tự động hóa ngắt nhịp phụ đề và máy nhắc chữ khi quay.
           </Typography>
         </Box>
-      </Paper>
+      </SpotlightCard>
 
       {/* Grid: Editor & Settings */}
       <Grid container spacing={3}>
         {/* Left: Script Input & Teleprompter */}
         <Grid size={{ xs: 12, md: 7 }}>
-          <Paper
-            elevation={0}
+          <SpotlightCard
+            spotlightColor="rgba(41, 151, 255, 0.12)"
+            hoverBorderColor="rgba(41, 151, 255, 0.35)"
             sx={{
               p: 3,
-              backgroundColor: APPLE_PALETTE.tile1,
-              border: `1px solid ${APPLE_PALETTE.hairline}`,
-              borderRadius: "18px",
+              borderRadius: "20px",
               height: "100%",
             }}
           >
@@ -143,7 +141,11 @@ export const StudioTab: React.FC = () => {
                 variant="contained"
                 startIcon={<SubtitlesIcon />}
                 onClick={handleGenerateSrt}
-                sx={{ fontWeight: 600 }}
+                sx={{
+                  fontWeight: 600,
+                  transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
+                  "&:active": { transform: "scale(0.96)" },
+                }}
               >
                 Tạo mã phụ đề .SRT
               </Button>
@@ -152,22 +154,25 @@ export const StudioTab: React.FC = () => {
                 variant="outlined"
                 startIcon={isPrompting ? <PauseIcon /> : <PlayArrowIcon />}
                 onClick={() => setIsPrompting(!isPrompting)}
+                sx={{
+                  transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
+                  "&:active": { transform: "scale(0.96)" },
+                }}
               >
                 {isPrompting ? "Tắt nhắc chữ" : "Chế độ máy nhắc chữ"}
               </Button>
             </Stack>
-          </Paper>
+          </SpotlightCard>
         </Grid>
 
         {/* Right: SRT Pacing & Output */}
         <Grid size={{ xs: 12, md: 5 }}>
-          <Paper
-            elevation={0}
+          <SpotlightCard
+            spotlightColor="rgba(41, 151, 255, 0.12)"
+            hoverBorderColor="rgba(41, 151, 255, 0.35)"
             sx={{
               p: 3,
-              backgroundColor: APPLE_PALETTE.tile1,
-              border: `1px solid ${APPLE_PALETTE.hairline}`,
-              borderRadius: "18px",
+              borderRadius: "20px",
               height: "100%",
               display: "flex",
               flexDirection: "column",
@@ -255,12 +260,14 @@ export const StudioTab: React.FC = () => {
                   py: 1.3,
                   fontWeight: 600,
                   bgcolor: APPLE_PALETTE.actionBlue,
+                  transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
+                  "&:active": { transform: "scale(0.96)" },
                 }}
               >
                 Tải file .SRT cho CapCut
               </Button>
             </Box>
-          </Paper>
+          </SpotlightCard>
         </Grid>
       </Grid>
     </Box>

@@ -10,7 +10,6 @@ import {
   Stack,
   IconButton,
   Grid,
-  Card,
   Chip,
   List,
   ListItem,
@@ -28,6 +27,7 @@ import KeyIcon from "@mui/icons-material/Key";
 import type { Plan, TrialStatus } from "../../models/types";
 import { ExportService } from "../../services/export";
 import { APPLE_PALETTE } from "../../theme/theme";
+import { SpotlightCard } from "../common/SpotlightCard";
 
 interface PricingDialogProps {
   open: boolean;
@@ -38,20 +38,23 @@ interface PricingDialogProps {
   onApplyVipCode: (code: string) => void;
 }
 
-const PLAN_THEMES: Record<string, { accent: string; glow: string; icon: React.ReactElement }> = {
+const PLAN_THEMES: Record<string, { accent: string; glow: string; spotlight: string; icon: React.ReactElement }> = {
   day_pass: {
     accent: APPLE_PALETTE.actionBlue,
     glow: "rgba(0, 113, 227, 0.4)",
+    spotlight: "rgba(0, 113, 227, 0.22)",
     icon: <ElectricBoltIcon sx={{ fontSize: 20, color: APPLE_PALETTE.actionBlue }} />,
   },
   month_pass: {
     accent: "#f5a623",
     glow: "rgba(245, 166, 35, 0.45)",
+    spotlight: "rgba(245, 166, 35, 0.25)",
     icon: <WorkspacePremiumIcon sx={{ fontSize: 20, color: "#f5a623" }} />,
   },
   year_pass: {
     accent: "#af52de",
     glow: "rgba(175, 82, 222, 0.45)",
+    spotlight: "rgba(175, 82, 222, 0.25)",
     icon: <DiamondIcon sx={{ fontSize: 20, color: "#af52de" }} />,
   },
 };
@@ -109,13 +112,16 @@ export const PricingDialog: React.FC<PricingDialogProps> = ({
             const themeInfo = PLAN_THEMES[plan.id] || {
               accent: APPLE_PALETTE.actionBlue,
               glow: "rgba(0, 113, 227, 0.4)",
+              spotlight: "rgba(0, 113, 227, 0.22)",
               icon: <ElectricBoltIcon sx={{ fontSize: 20 }} />,
             };
 
             return (
               <Grid size={{ xs: 12, md: 4 }} key={plan.id}>
-                <Card
-                  elevation={0}
+                <SpotlightCard
+                  spotlightColor={themeInfo.spotlight}
+                  hoverBorderColor={themeInfo.accent}
+                  enableScaleHover
                   sx={{
                     p: 3,
                     height: "100%",
@@ -127,11 +133,8 @@ export const PricingDialog: React.FC<PricingDialogProps> = ({
                     borderRadius: "20px",
                     position: "relative",
                     overflow: "visible",
-                    transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
                     "&:hover": {
-                      transform: "translateY(-4px)",
-                      borderColor: themeInfo.accent,
-                      boxShadow: `0 12px 32px ${themeInfo.glow}`,
+                      boxShadow: `0 14px 36px ${themeInfo.glow}`,
                       bgcolor: "rgba(28, 28, 30, 0.98)",
                     },
                   }}
@@ -150,6 +153,7 @@ export const PricingDialog: React.FC<PricingDialogProps> = ({
                         fontWeight: 700,
                         fontSize: "0.6875rem",
                         boxShadow: `0 2px 8px ${themeInfo.glow}`,
+                        zIndex: 3,
                       }}
                     />
                   )}
@@ -204,23 +208,30 @@ export const PricingDialog: React.FC<PricingDialogProps> = ({
                       borderColor: themeInfo.accent,
                       bgcolor: plan.popular ? themeInfo.accent : "transparent",
                       color: plan.popular ? "#000000" : themeInfo.accent,
+                      transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
                       "&:hover": {
                         bgcolor: themeInfo.accent,
                         color: "#000000",
-                        boxShadow: `0 4px 16px ${themeInfo.glow}`,
+                        boxShadow: `0 6px 20px ${themeInfo.glow}`,
+                      },
+                      "&:active": {
+                        transform: "scale(0.96)",
                       },
                     }}
                   >
                     Chọn gói này
                   </Button>
-                </Card>
+                </SpotlightCard>
               </Grid>
             );
           })}
         </Grid>
 
         {/* Manual VIP code input */}
-        <Box sx={{ p: 2, bgcolor: APPLE_PALETTE.tile2, borderRadius: "14px", border: `1px solid ${APPLE_PALETTE.hairline}` }}>
+        <SpotlightCard
+          spotlightColor="rgba(41, 151, 255, 0.1)"
+          sx={{ p: 2, bgcolor: APPLE_PALETTE.tile2, borderRadius: "16px", border: `1px solid ${APPLE_PALETTE.hairline}` }}
+        >
           <Stack
             direction={{ xs: "column", sm: "row" }}
             spacing={1.5}
@@ -244,12 +255,16 @@ export const PricingDialog: React.FC<PricingDialogProps> = ({
               size="medium"
               disabled={!manualCode.trim()}
               onClick={() => onApplyVipCode(manualCode)}
-              sx={{ whiteSpace: "nowrap" }}
+              sx={{
+                whiteSpace: "nowrap",
+                transition: "all 0.15s ease",
+                "&:active": { transform: "scale(0.96)" },
+              }}
             >
               Kích hoạt
             </Button>
           </Stack>
-        </Box>
+        </SpotlightCard>
       </DialogContent>
 
       <DialogActions sx={{ p: 3, pt: 1 }}>

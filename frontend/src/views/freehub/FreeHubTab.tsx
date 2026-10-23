@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import {
-  Paper,
   Box,
   Typography,
   TextField,
@@ -8,7 +7,6 @@ import {
   Stack,
   Chip,
   Grid,
-  Card,
   IconButton,
   InputAdornment,
 } from "@mui/material";
@@ -22,6 +20,7 @@ import SpeedIcon from "@mui/icons-material/Speed";
 import { VIRAL_HOOKS, HASHTAG_PRESETS, FreeToolsService } from "../../services/freeTools";
 import { ExportService } from "../../services/export";
 import { APPLE_PALETTE } from "../../theme/theme";
+import { SpotlightCard } from "../common/SpotlightCard";
 
 export const FreeHubTab: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>("Tất cả");
@@ -54,13 +53,12 @@ export const FreeHubTab: React.FC = () => {
   return (
     <Box sx={{ maxWidth: 960, mx: "auto", px: 2, py: 3 }}>
       {/* Header Banner */}
-      <Paper
-        elevation={0}
+      <SpotlightCard
+        spotlightColor="rgba(48, 209, 88, 0.16)"
+        hoverBorderColor="rgba(48, 209, 88, 0.4)"
         sx={{
           p: { xs: 2.5, sm: 3.5 },
           mb: 4,
-          backgroundColor: APPLE_PALETTE.tile1,
-          border: `1px solid ${APPLE_PALETTE.hairline}`,
           borderRadius: "20px",
           display: "flex",
           flexDirection: { xs: "column", sm: "row" },
@@ -94,7 +92,7 @@ export const FreeHubTab: React.FC = () => {
             Trọn bộ công cụ hỗ trợ sáng tạo video ngắn không giới hạn số lần, không tiêu hao điểm tín dụng AI và xử lý trực tiếp trên trình duyệt của bạn.
           </Typography>
         </Box>
-      </Paper>
+      </SpotlightCard>
 
       {/* Section 1: Viral Hook Library */}
       <Box sx={{ mb: 6 }}>
@@ -151,9 +149,13 @@ export const FreeHubTab: React.FC = () => {
                 border: `1px solid ${selectedCategory === cat ? APPLE_PALETTE.actionBlue : APPLE_PALETTE.hairline}`,
                 fontWeight: selectedCategory === cat ? 600 : 400,
                 cursor: "pointer",
+                transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
                 "&:hover": {
                   backgroundColor: selectedCategory === cat ? APPLE_PALETTE.actionBlueHover : APPLE_PALETTE.tileHover,
                   color: "#ffffff",
+                },
+                "&:active": {
+                  transform: "scale(0.96)",
                 },
               }}
             />
@@ -167,22 +169,16 @@ export const FreeHubTab: React.FC = () => {
             const isCopied = copiedId === hookId;
             return (
               <Grid size={{ xs: 12, sm: 6 }} key={idx}>
-                <Card
-                  elevation={0}
+                <SpotlightCard
+                  spotlightColor="rgba(41, 151, 255, 0.12)"
+                  hoverBorderColor="rgba(41, 151, 255, 0.4)"
+                  enableScaleHover
                   sx={{
                     p: 2.5,
                     height: "100%",
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    bgcolor: APPLE_PALETTE.tile1,
-                    border: `1px solid ${APPLE_PALETTE.hairline}`,
-                    borderRadius: "16px",
-                    transition: "border-color 0.2s ease, transform 0.15s ease",
-                    "&:hover": {
-                      borderColor: "rgba(41, 151, 255, 0.35)",
-                      transform: "translateY(-2px)",
-                    },
                   }}
                 >
                   <Box sx={{ mb: 1.5 }}>
@@ -197,7 +193,9 @@ export const FreeHubTab: React.FC = () => {
                         onClick={() => handleCopy(h.hook, hookId)}
                         sx={{
                           color: isCopied ? APPLE_PALETTE.success : APPLE_PALETTE.inkMuted,
+                          transition: "all 0.15s ease",
                           "&:hover": { color: "#ffffff" },
+                          "&:active": { transform: "scale(0.9)" },
                         }}
                       >
                         {isCopied ? <CheckIcon sx={{ fontSize: 18 }} /> : <ContentCopyIcon sx={{ fontSize: 18 }} />}
@@ -223,11 +221,13 @@ export const FreeHubTab: React.FC = () => {
                       fontSize: "0.75rem",
                       color: isCopied ? APPLE_PALETTE.success : APPLE_PALETTE.skyLink,
                       p: 0,
+                      transition: "all 0.15s ease",
+                      "&:active": { transform: "scale(0.96)" },
                     }}
                   >
                     {isCopied ? "Đã sao chép" : "Sao chép công thức"}
                   </Button>
-                </Card>
+                </SpotlightCard>
               </Grid>
             );
           })}
@@ -236,13 +236,12 @@ export const FreeHubTab: React.FC = () => {
 
       {/* Section 2: Quick Pacing & Duration Calculator */}
       <Box sx={{ mb: 6 }}>
-        <Paper
-          elevation={0}
+        <SpotlightCard
+          spotlightColor="rgba(41, 151, 255, 0.12)"
+          hoverBorderColor="rgba(41, 151, 255, 0.35)"
           sx={{
             p: 3,
-            backgroundColor: APPLE_PALETTE.tile1,
-            border: `1px solid ${APPLE_PALETTE.hairline}`,
-            borderRadius: "18px",
+            borderRadius: "20px",
           }}
         >
           <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
@@ -307,7 +306,7 @@ export const FreeHubTab: React.FC = () => {
               </Box>
             </Grid>
           </Grid>
-        </Paper>
+        </SpotlightCard>
       </Box>
 
       {/* Section 3: Hashtag SEO Matrix */}
@@ -329,12 +328,11 @@ export const FreeHubTab: React.FC = () => {
             const isCopied = copiedId === tagId;
             return (
               <Grid size={{ xs: 12, sm: 6 }} key={idx}>
-                <Paper
-                  elevation={0}
+                <SpotlightCard
+                  spotlightColor="rgba(175, 82, 222, 0.12)"
+                  hoverBorderColor="rgba(175, 82, 222, 0.4)"
                   sx={{
                     p: 2.5,
-                    bgcolor: APPLE_PALETTE.tile1,
-                    border: `1px solid ${APPLE_PALETTE.hairline}`,
                     borderRadius: "16px",
                   }}
                 >
@@ -349,6 +347,8 @@ export const FreeHubTab: React.FC = () => {
                       sx={{
                         fontSize: "0.75rem",
                         color: isCopied ? APPLE_PALETTE.success : APPLE_PALETTE.skyLink,
+                        transition: "all 0.15s ease",
+                        "&:active": { transform: "scale(0.96)" },
                       }}
                     >
                       {isCopied ? "Đã chép" : "Sao chép"}
@@ -357,7 +357,7 @@ export const FreeHubTab: React.FC = () => {
                   <Typography variant="caption" sx={{ color: APPLE_PALETTE.inkMuted, wordBreak: "break-all" }}>
                     {tagStr}
                   </Typography>
-                </Paper>
+                </SpotlightCard>
               </Grid>
             );
           })}
