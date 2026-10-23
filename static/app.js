@@ -28,7 +28,7 @@ async function loadExtensionScript() {
       await new Promise((resolve) => {
         const s = document.createElement("script");
         const sep = data.frontend_script.includes("?") ? "&" : "?";
-        s.src = `${data.frontend_script}${sep}v=2.5`;
+        s.src = `${data.frontend_script}${sep}v=3.0`;
         s.onload = resolve;
         s.onerror = resolve; // never block the app if the add-on fails to load
         document.body.appendChild(s);
@@ -37,6 +37,20 @@ async function loadExtensionScript() {
   } catch (err) {
     console.warn("Extension script not loaded:", err);
   }
+}
+
+// React Bits SpotlightCard Mouse Tracker
+function initReactBitsSpotlight() {
+  document.addEventListener("mousemove", (e) => {
+    const cards = document.querySelectorAll(".card, .rb-spotlight-card");
+    cards.forEach((card) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      card.style.setProperty("--mouse-x", `${x}px`);
+      card.style.setProperty("--mouse-y", `${y}px`);
+    });
+  });
 }
 
 let currentMode = "explain";
@@ -130,16 +144,16 @@ function renderMarkdownWithTimestamps(mdText) {
   // Biến các mốc thời gian dạng [00:15] hoặc 01:25 thành nút bấm tua video trực tiếp
   return html.replace(/\[?(\b\d{1,2}:\d{2}(?::\d{2})?\b)\]?/g, (match, ts) => {
     const secs = parseTimestampToSeconds(ts);
-    return `<button type="button" class="timestamp-link" onclick="seekVideoTo(${secs})" title="Tua video tới ${ts}">⏱️ ${ts}</button>`;
+    return `<button type="button" class="timestamp-link" onclick="seekVideoTo(${secs})" title="Tua video tới ${ts}">⏱ ${ts}</button>`;
   });
 }
 
 function detectPlatformLabel(text) {
   const lower = (text || "").toLowerCase();
-  if (lower.includes("tiktok.com")) return "🎵 TikTok";
-  if (lower.includes("facebook.com") || lower.includes("fb.watch") || lower.includes("fb.com")) return "📘 FB Reels";
-  if (lower.includes("youtube.com") || lower.includes("youtu.be")) return "▶️ YouTube";
-  if (lower.includes("instagram.com")) return "📸 IG Reels";
+  if (lower.includes("tiktok.com")) return "TikTok";
+  if (lower.includes("facebook.com") || lower.includes("fb.watch") || lower.includes("fb.com")) return "FB Reels";
+  if (lower.includes("youtube.com") || lower.includes("youtu.be")) return "YouTube";
+  if (lower.includes("instagram.com")) return "IG Reels";
   return "🔗 Link";
 }
 
@@ -155,7 +169,7 @@ function showError(msg) {
     errorBanner.textContent = "";
     return;
   }
-  errorBanner.textContent = "⚠️ " + msg;
+  errorBanner.textContent = msg;
   errorBanner.style.display = "block";
 }
 
@@ -214,7 +228,7 @@ function renderHistory() {
     const fname = item.video.filename || `${item.session_id}.mp4`;
     div.innerHTML = `
       <div class="history-item-title">${item.video.title || "Video đã phân tích"}</div>
-      <div class="history-item-sub">${item.video.platform} • 📁 <code>${fname}</code></div>
+      <div class="history-item-sub">${item.video.platform} • <code>${fname}</code></div>
     `;
     div.addEventListener("click", () => {
       displayAnalysisResult(item, false);
@@ -237,7 +251,7 @@ function displayAnalysisResult(data, saveRecord = true) {
   savedFileName.textContent = currentSavedFilename;
 
   if (data.model_used) {
-    modelUsedBadge.textContent = `🧠 ${data.model_used}`;
+    modelUsedBadge.textContent = data.model_used;
   }
 
   // Hiển thị hộp Đoạn hướng dẫn trọng tâm nếu có
@@ -246,7 +260,7 @@ function displayAnalysisResult(data, saveRecord = true) {
     keySegmentTime.textContent = `${data.key_segment.start_time} - ${data.key_segment.end_time}`;
     keySegmentDesc.textContent = data.key_segment.summary || "";
     currentKeySegmentSeconds = data.key_segment.start_seconds || 0;
-    jumpSegmentBtn.textContent = `▶️ Xem ngay (${data.key_segment.start_time})`;
+    jumpSegmentBtn.textContent = `▶ Xem ngay (${data.key_segment.start_time})`;
   } else {
     keySegmentBanner.style.display = "none";
   }
@@ -276,17 +290,17 @@ async function handleAnalyzeVideo() {
   const apiKey = getStoredApiKey();
   if (!serverHasApiKey && !apiKey) {
     settingsModal.classList.add("open");
-    showError("Bạn cần nhập Gemini API Key trong phần Cài đặt trước khi phân tích.");
+    showError("Bạn cần nhập Mã VIP hoặc Gemini API Key trong phần Cài đặt trước khi phân tích.");
     return;
   }
 
   showError("");
   analyzeBtn.disabled = true;
   loadingBox.style.display = "block";
-  loadingStepText.textContent = "Đang tải & lưu video theo Tên + Mã phiên vào thư mục saved_videos/...";
+  loadingStepText.textContent = "Đang tải & đồng bộ luồng video gốc...";
 
   const stepTimer = setTimeout(() => {
-    loadingStepText.textContent = "Model Gemini Pro đang tìm đoạn hướng dẫn trọng tâm & mở rộng kiến thức chuyên sâu...";
+    loadingStepText.textContent = "Gemini Pro đang phân tích khung hình & dò đoạn hướng dẫn trọng tâm...";
   }, 2600);
 
   try {
@@ -333,7 +347,7 @@ async function handleSendChat(questionText) {
 
   const botBubble = document.createElement("div");
   botBubble.className = "chat-bubble assistant markdown-body";
-  botBubble.textContent = "🤖 Model Pro đang phân tích sâu để trả lời...";
+  botBubble.textContent = "Gemini Pro đang phân tích sâu để trả lời...";
   chatMessages.appendChild(botBubble);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 
@@ -414,7 +428,7 @@ copyFilenameBtn.addEventListener("click", async () => {
   if (!currentSavedFilename) return;
   await navigator.clipboard.writeText(currentSavedFilename);
   const old = copyFilenameBtn.textContent;
-  copyFilenameBtn.textContent = "✅ Đã chép tên file";
+  copyFilenameBtn.textContent = "Đã chép tên file";
   setTimeout(() => {
     copyFilenameBtn.textContent = old;
   }, 1600);
@@ -424,7 +438,7 @@ copyExplanationBtn.addEventListener("click", async () => {
   if (!currentExplanationRaw) return;
   await navigator.clipboard.writeText(currentExplanationRaw);
   const oldText = copyExplanationBtn.textContent;
-  copyExplanationBtn.textContent = "✅ Đã chép";
+  copyExplanationBtn.textContent = "Đã sao chép";
   setTimeout(() => {
     copyExplanationBtn.textContent = oldText;
   }, 1800);
@@ -480,6 +494,7 @@ closeShortcutModalBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("DOMContentLoaded", async () => {
+  initReactBitsSpotlight();
   await checkServerHealth();
   await loadExtensionScript();
   renderHistory();
