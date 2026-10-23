@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>LensAI Pro — Phân Tích Video & Studio Đạo Diễn AI</title>
 
   <!-- Cấu hình PWA cho iOS & Android & Desktop -->
@@ -14,24 +14,25 @@
   <meta name="apple-mobile-web-app-title" content="LensAI" />
   <meta name="theme-color" content="#000000" />
 
-  <link rel="stylesheet" href="/static/style.css?v=3.0" />
+  <link rel="stylesheet" href="/static/style.css?v=3.1" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-  <!-- Apple Global Glass Navigation Bar -->
+  <!-- Apple Global Glass Navigation Bar (Auto-scales across Mobile / Tablet / Desktop) -->
   <header class="apple-global-nav">
     <div class="apple-nav-inner">
       <div class="brand">
         <img src="/static/icon.svg" alt="LensAI" class="brand-icon" />
         <div class="brand-title">
-          LensAI
+          <span>LensAI</span>
           <span class="badge-ai">Gemini Pro</span>
         </div>
       </div>
 
       <div class="header-actions">
         <button class="icon-btn" id="openShortcutModalBtn" title="Hướng dẫn gắn lên nút Chia sẻ của iOS">
-          <span>Phím tắt iOS</span>
+          <span class="btn-label-full">Phím tắt iOS</span>
+          <span class="btn-label-compact">iOS</span>
         </button>
         <button class="icon-btn" id="openSettingsModalBtn" title="Cấu hình Gemini API Key hoặc Mã VIP">
           <span class="status-dot" id="apiKeyStatusDot"></span>
@@ -42,7 +43,7 @@
   </header>
 
   <main class="app-container">
-    <!-- Apple Editorial Hero Header with React Bits BlurText & ShinyText -->
+    <!-- Apple Editorial Hero Header with Fluid Auto-Scaling Typography -->
     <section class="apple-hero rb-blur-in">
       <div class="apple-hero-eyebrow">
         <span class="rb-shiny-text">Apple Cinema Intelligence • Multimodal Video AI</span>
@@ -54,7 +55,7 @@
     </section>
 
     <!-- Khung nhập Link & Chọn chế độ phân tích (Bento Spotlight Card) -->
-    <section class="card rb-blur-in">
+    <section class="card rb-blur-in" id="linkWorkspaceCard">
       <div class="url-input-group">
         <div class="input-wrapper">
           <span class="platform-pill" id="platformBadge">🔗 Link</span>
@@ -65,7 +66,7 @@
             placeholder="Dán link TikTok, Facebook Reels hoặc YouTube Shorts vào đây..."
             autocomplete="off"
           />
-          <button class="clear-input-btn" id="clearInputBtn" title="Xóa">✕</button>
+          <button class="clear-input-btn" id="clearInputBtn" title="Xóa" aria-label="Xóa">✕</button>
         </div>
         <button class="paste-btn" id="pasteBtn" type="button">Dán nhanh</button>
       </div>
@@ -110,10 +111,10 @@
     <!-- Thông báo lỗi -->
     <div class="error-banner" id="errorBanner"></div>
 
-    <!-- Khu vực Kết quả: Cột trái Video, Cột phải Giải thích & Chat -->
+    <!-- Khu vực Kết quả: Tự động chia 2 cột tỉ lệ vàng trên Desktop/iPad ngang, thu gọn 1 cột trên Mobile/iPad dọc -->
     <section class="result-layout" id="resultLayout">
-      <!-- Cột Video Preview & Thông tin File đã lưu -->
-      <div class="card">
+      <!-- Cột Video Preview & Thông tin File đã lưu (Sticky trên màn hình lớn) -->
+      <div class="card video-sticky-card">
         <div class="video-player-wrap">
           <video id="videoPlayer" controls playsinline preload="metadata"></video>
         </div>
@@ -128,7 +129,7 @@
         <div class="saved-file-box" id="savedFileBox">
           <div class="saved-file-label">Đã lưu vào thư mục <code>saved_videos/</code></div>
           <div class="saved-file-name" id="savedFileName">Ten_Video__session.mp4</div>
-          <div style="display: flex; gap: 0.5rem; margin-top: 0.65rem; flex-wrap: wrap;">
+          <div class="saved-file-actions">
             <button type="button" class="chip-btn" id="copyFilenameBtn">Chép tên file</button>
             <a id="originalVideoLink" href="#" target="_blank" rel="noopener" class="chip-btn" style="text-decoration: none;">
               Mở link gốc ↗
@@ -140,8 +141,8 @@
       <!-- Cột Giải thích của AI & Hỏi đáp tiếp -->
       <div class="card">
         <div class="explanation-header">
-          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
-            <span style="font-weight: 600; font-size: 1.05rem; letter-spacing: -0.02em; color: #fff;">Phân tích & Mở rộng Chuyên sâu</span>
+          <div class="explanation-header-left">
+            <span class="explanation-title-text">Phân tích & Mở rộng Chuyên sâu</span>
             <span class="model-badge" id="modelUsedBadge">Gemini Pro</span>
           </div>
           <button class="icon-btn" id="copyExplanationBtn" type="button">Sao chép</button>
@@ -198,9 +199,9 @@
 
     <!-- Kho Video đã lưu trong thư mục & Lịch sử -->
     <section class="card" id="historyCard" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="font-weight: 600; font-size: 0.96rem; letter-spacing: -0.015em; color: #fff;">Lịch sử phân tích gần đây</div>
-        <button class="icon-btn" id="clearHistoryBtn" style="padding: 4px 11px; font-size: 0.74rem;">Xóa lịch sử</button>
+      <div class="history-header">
+        <div class="history-title">Lịch sử phân tích gần đây</div>
+        <button class="icon-btn" id="clearHistoryBtn">Xóa lịch sử</button>
       </div>
       <div class="history-list" id="historyList"></div>
     </section>
@@ -210,14 +211,14 @@
   <div class="modal-backdrop" id="settingsModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 style="font-size: 1.08rem; font-weight: 600; letter-spacing: -0.02em;">Cấu hình khóa truy cập AI</h3>
+        <h3>Cấu hình khóa truy cập AI</h3>
         <button class="icon-btn" id="closeSettingsModalBtn">✕</button>
       </div>
-      <p style="font-size: 0.86rem; color: var(--text-secondary); margin-bottom: 14px; line-height: 1.55;">
+      <p class="modal-desc">
         Nhập <strong>Mã VIP Pro</strong> (không cần tài khoản Google) hoặc khóa <strong>Gemini API Key</strong> cá nhân của bạn để kích hoạt luồng phân tích sâu.
       </p>
       <div style="margin-bottom: 16px;">
-        <label style="display: block; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 6px;">
+        <label class="modal-field-label">
           Mã VIP hoặc Gemini API Key (<a href="https://aistudio.google.com/apikey" target="_blank" style="color: var(--apple-link); text-decoration: none;">Lấy tại Google AI Studio ↗</a>):
         </label>
         <input
@@ -228,8 +229,8 @@
           placeholder="VIP-XXXX-XXXX hoặc AIzaSy..."
         />
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="analyze-btn" id="saveApiKeyBtn" style="padding: 10px 20px; font-size: 0.86rem;">
+      <div class="modal-footer">
+        <button class="analyze-btn" id="saveApiKeyBtn">
           Lưu thiết lập
         </button>
       </div>
@@ -240,11 +241,11 @@
   <div class="modal-backdrop" id="shortcutModal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 style="font-size: 1.08rem; font-weight: 600; letter-spacing: -0.02em;">Tích hợp iPhone (iOS Shortcuts & PWA)</h3>
+        <h3>Tích hợp iPhone (iOS Shortcuts & PWA)</h3>
         <button class="icon-btn" id="closeShortcutModalBtn">✕</button>
       </div>
 
-      <div style="font-size: 0.86rem; color: var(--text-primary); line-height: 1.6;">
+      <div class="shortcut-guide-body">
         <p style="margin-bottom: 12px;">
           <strong>1. Cài Web App ra Màn hình chính iPhone</strong><br />
           Mở trang này bằng <strong>Safari</strong> → nhấn nút <strong>Chia sẻ (Share)</strong> → chọn <strong>"Thêm vào MH chính" (Add to Home Screen)</strong>.
@@ -269,6 +270,6 @@
     </div>
   </div>
 
-  <script src="/static/app.js?v=3.0"></script>
+  <script src="/static/app.js?v=3.1"></script>
 </body>
 </html>

@@ -1,9 +1,9 @@
-# LensAI Video — Product Design Specification & Apple Cinema Design System
+# LensAI Video — Product Design Specification & Universal Multi-Device Auto-Scaling System
 
 > **Document Type:** Figma Product Design Specification (`figma-spec` + `DESIGN.md`)  
 > **Product:** LensAI Video (`video-explainer` + `lensai-video-pro`)  
 > **Live Production URL:** [https://lensai-video.onrender.com](https://lensai-video.onrender.com)  
-> **Design System Foundation:** Apple Human Interface Guidelines (Dark Mode Cinema) + React Bits Interactive Micro-interactions
+> **Design System Foundation:** Apple Human Interface Guidelines (Dark Mode Cinema) + React Bits Interactive Micro-interactions + Fluid CSS `clamp()` Auto-Scaling
 
 ---
 
@@ -18,9 +18,35 @@
 
 ---
 
-## 2. Design System Foundations (Figma Variables & Tokens)
+## 2. Universal Multi-Device Auto-Scaling Matrix (Mọi Thiết Bị & Kích Thước Màn Hình)
 
-### 2.1. Color Palette (Apple Pro Dark Cinema)
+Hệ thống giao diện được thiết kế theo triết lý **Fluid Responsive + Safe-Area First**, tự động co giãn mượt mà từ màn hình điện thoại nhỏ nhất (`320px`) tới màn hình 4K Studio Display (`2560px+`):
+
+| Phân khúc Thiết bị | Độ rộng Viewport | Container Max-Width | Bố cục Kết quả (`result-layout`) | Bộ chọn Chế độ (`mode-selector`) | Kiểu hiển thị Modal |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **1. Ultra-Compact Mobile & Split-View** *(iPhone SE, Galaxy Fold ngoài)* | `320px – 370px` | `100%` (Padding `12px`) | `1 cột` (Xếp chồng dọc) | `1 cột` (4 hàng) | **iOS Bottom Sheet** (`border-radius: 22px 22px 0 0`) |
+| **2. Smartphone Tiêu chuẩn & Pro Max** *(iPhone 15/16 Pro Max, Android)* | `371px – 640px` | `100%` (Padding `clamp(12px, 3.2vw, 20px)`) | `1 cột` (Video cao tối đa `54dvh` để không che kết quả) | `2 cột × 2 hàng` | **iOS Bottom Sheet** trượt từ đáy + `safe-area-inset-bottom` |
+| **3. Tablet Portrait & Foldable Mở** *(iPad Mini, iPad Air dọc, Z Fold mở)* | `641px – 920px` | `93vw` | `1 cột` rộng rãi, thanh tìm kiếm & nút nằm ngang | `2 cột × 2 hàng` | **Centered Glass Dialog** (`max-width: 520px–820px`) |
+| **4. Tablet Landscape & Laptop 13"–16"** *(iPad Pro ngang, MacBook Air/Pro)* | `921px – 1599px` | `clamp(900px, 93vw, 1340px)` | **2 cột Tỉ lệ vàng** (`minmax(300px, 34%)` Trái Sticky + `1fr` Phải) | `4 cột ngang` (`repeat(4, 1fr)`) | **Centered Glass Dialog** (`max-height: 88dvh`) |
+| **5. Desktop 24"–32" 2K/4K UltraWide** *(iMac, Apple Studio Display)* | `1600px – 2560px+` | `1420px` (Căn giữa cân đối) | **2 cột** (`400px` Trái Sticky Video + `1000px` Phải) | `4 cột ngang` | **Centered Glass Dialog** (`860px`) |
+
+---
+
+### 2.1. Công thức Fluid CSS `clamp()` & Quy tắc iOS/Android Native
+1. **Fluid Typography (Tự động phóng chữ theo độ rộng màn hình):**
+   - `Hero Title`: `clamp(1.45rem, 1.1rem + 2.4vw, 2.75rem)` (Từ `23.2px` trên iPhone nhỏ $\rightarrow$ `44px` trên Desktop).
+   - `Hero Subtitle`: `clamp(0.84rem, 0.8rem + 0.3vw, 1.02rem)`.
+   - `Section Heading`: `clamp(0.96rem, 0.9rem + 0.25vw, 1.08rem)`.
+   - `Editorial Body`: `clamp(0.9rem, 0.86rem + 0.18vw, 0.96rem)`.
+2. **Chống lỗi iOS Safari tự động Zoom khi chạm vào ô nhập liệu:**
+   - Mọi thẻ `<input>` và `<select>` đều áp dụng `font-size: clamp(16px, ...)` (tối thiểu `16px`), giúp iPhone/iPad giữ nguyên tỷ lệ khung hình khi bàn phím ảo bật lên.
+3. **Dynamic Viewport Height (`100dvh`) & Tai thỏ (`env(safe-area-inset-*)`):**
+   - Sử dụng `100dvh` thay cho `100vh` thuần túy để tự động thích ứng khi thanh địa chỉ Safari/Chrome thu gọn hoặc mở rộng.
+   - Đệm tự động `env(safe-area-inset-top)` trên thanh Header và `env(safe-area-inset-bottom)` dưới đáy trang / Bottom Sheet Modal cho iPhone Dynamic Island.
+
+---
+
+## 3. Design System Foundations (Figma Variables & Tokens)
 
 | Token Name (`Figma Variable`) | Hex Value | RGB (0–1) | Scopes | Mục đích sử dụng |
 | :--- | :--- | :--- | :--- | :--- |
@@ -38,70 +64,12 @@
 
 ---
 
-### 2.2. Typography Scale (SF Pro / Inter)
-
-- **Font Family:** `SF Pro Display` / `SF Pro Text` / `Inter` (`-apple-system, BlinkMacSystemFont`)
-- **Monospace Family:** `SF Mono` (dùng cho tên file video, mã `VIP-XXXX-XXXX`, mốc thời gian `[MM:SS]` và nội dung file `.SRT`)
-- **Weights:** Chỉ sử dụng `400 (Regular)`, `600 (SemiBold)`, `700 (Bold)`.
-
-| Style Name | Size | Line Height | Letter Spacing | Weight | Ứng dụng |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `Display / Hero Title` | `42px` | `46px` (`1.10`) | `-0.028em` | `700 Bold` | Tiêu đề chính: *"Hiểu sâu mọi video. Dựng clip lên xu hướng."* |
-| `Heading / Card Title` | `18px` | `24px` (`1.33`) | `-0.020em` | `600 SemiBold` | Tiêu đề các khối Bento Card & Modal |
-| `Body / Editorial` | `15px` | `25px` (`1.65`) | `-0.016em` | `400 Regular` | Nội dung giải thích AI & Cố vấn đạo diễn |
-| `Control / Pill Label` | `13.5px` | `18px` (`1.33`) | `-0.010em` | `600 SemiBold` | Nhãn trên các nút bấm Pill, Segmented Tab |
-| `Caption / Eyebrow` | `12px` | `16px` (`1.33`) | `+0.060em` | `600 SemiBold` | Nhãn `APPLE CINEMA INTELLIGENCE` & thẻ tag metadata |
-
----
-
-### 2.3. Geometry & React Bits Interactive Effects
-
-1. **Bento Card (`border-radius: 20px`, `padding: 24px`):**
-   - Tích hợp hiệu ứng **React Bits `SpotlightCard`**: Theo dõi tọa độ chuột `(--mouse-x, --mouse-y)` để tạo vầng sáng radial `560px` màu `rgba(41, 151, 255, 0.09)` di chuyển mượt dưới bề mặt thẻ.
-2. **Full Pill Controls (`border-radius: 9999px`):**
-   - Áp dụng cho thanh tìm kiếm URL, thanh chuyển đổi 2-Tab (`pro-workspace-tabs`), nút Primary CTA (`Phân tích Video`), và các nút Timestamp (`⏱ 00:15`).
-3. **React Bits `ShinyText` & `BlurText`:**
-   - Dòng nhãn Hero Eyebrow chạy hiệu ứng ánh kim `rb-shine` chu kỳ `6s`.
-   - Khi chuyển đổi giữa Tab 1 và Tab 2, khung nội dung xuất hiện với hiệu ứng `rb-blur-in` (`filter: blur(12px) -> blur(0)` trong `0.45s`).
-
----
-
-## 3. Screen-by-Screen Layout Specification
+## 4. Multi-Device Architecture Diagram
 
 ```mermaid
 flowchart TB
-  Nav["1. Apple Global Glass Nav (Height: 52px)<br/>Logo LensAI • Badge Gemini Pro • Nút Nâng cấp VIP Pro • Phím tắt iOS • API Key"]
-  Hero["2. Editorial Hero Header<br/>ShinyText Eyebrow + H1 Title + Subtitle"]
-  Tabs["3. Apple Segmented 2-Tab Switcher (Pill 9999px)<br/>[Tab 1: Giải thích Link Video (Cơ bản)]  |  [Tab 2: Studio Creator · Xuất .SRT CapCut (VIP Pro)]"]
-
-  Nav --> Hero --> Tabs
-  Tabs --> Tab1["Màn hình Tab 1: Giải thích Link Video"]
-  Tabs --> Tab2["Màn hình Tab 2: Studio Creator VIP"]
-  Nav --> ModalVIP["Modal: Nâng cấp VIP Pro & Thanh toán VietQR Tự động"]
-
-  subgraph Tab1Flow["Bố cục Tab 1 (Link Mode)"]
-    T1Input["Bento Input Card: Pill URL Input + 4 Segmented Modes + Custom Prompt + Primary Blue CTA"]
-    T1Result["2-Column Bento Result Grid (360px | 1fr)<br/>Cột Trái: Trình phát Video + Hộp saved_videos/<br/>Cột Phải: Banner Đoạn Trọng Tâm + Nội dung Markdown + Chat AI"]
-    T1Input --> T1Result
-  end
-
-  subgraph Tab2Flow["Bố cục Tab 2 (Creator Upload Studio)"]
-    T2Upload["Bento Upload Card: Dropzone chọn file .MP4/.MOV + Chọn Ngôn ngữ dịch .SRT + Chọn Giai điệu đọc + Nút Phân tích (1 Credit)"]
-    T2Result["2-Column Studio Result Grid (360px | 1fr)<br/>Cột Trái: Video gốc + Thẻ tải file .SRT CapCut + Preview .SRT<br/>Cột Phải: Cố vấn Đạo diễn AI (Chấm điểm Hook 3s + Bảng cắt ghép [MM:SS])"]
-    T2Upload --> T2Result
-  end
+  Viewport["Trình duyệt nhận diện Viewport (CSS clamp + Media Queries + dvh)"]
+  Viewport --> Desktop["Desktop / Laptop / iPad Ngang (> 920px)<br/>• Container: clamp(900px, 93vw, 1420px)<br/>• 2-Tab Pill Switcher nằm ngang<br/>• Kết quả 2 Cột: Cột Video Sticky (34%) + Cột AI (66%)<br/>• Modal: Centered Glass Dialog"]
+  Viewport --> Tablet["Tablet Dọc / Foldable (641px – 920px)<br/>• Container: 93vw<br/>• 2-Tab Pill Switcher nằm ngang<br/>• Mode Selector: 2×2 Grid<br/>• Kết quả 1 Cột rộng"]
+  Viewport --> Mobile["Smartphone iOS / Android (320px – 640px)<br/>• Safe-Area Inset cho Dynamic Island & Home Bar<br/>• Header thu gọn nhãn thông minh<br/>• 2-Tab Switcher xếp chồng vừa ngón tay cái<br/>• Modal trượt từ đáy kiểu iOS Bottom Sheet"]
 ```
-
----
-
-## 4. User Flows & CapCut `.SRT` Integration Spec
-
-### 4.1. Luồng Studio Creator & Xuất file `.SRT` vào CapCut
-1. Người dùng chuyển sang tab **`Studio Creator · Xuất .SRT CapCut (VIP Pro)`**.
-2. Chọn file video cá nhân từ máy (`.MP4`, `.MOV`, `.WEBM` tối đa 60MB).
-3. Chọn **Ngôn ngữ phụ đề/lời bình** (`Tiếng Việt`, `Tiếng Anh`, `Tiếng Trung`, `Tiếng Nhật`, `Tiếng Hàn`) và **Giai điệu đọc** (`TikTok Viral`, `Bán hàng Affiliate`, `Chuyên gia`, `Hài hước GenZ`, `Kể chuyện điện ảnh`).
-4. Nhấn **Phân tích Cắt ghép & Xuất File .SRT CapCut (1 Credit)**:
-   - Backend tải video lên Gemini File API, phân tích đồng thời hình ảnh + âm thanh.
-   - Trả về **Bản Cố vấn Đạo diễn AI** (chấm điểm 3 giây đầu, liệt kê từng mốc `[MM:SS]` cần cắt bỏ hoặc chèn hiệu ứng).
-   - Tự động trích xuất khối `.SRT` chuẩn khung thời gian (`00:00:00,000 --> 00:00:03,200`) và **tự động tải file `.srt` về máy**.
-5. Người dùng mở **CapCut** $\rightarrow$ **Văn bản (Text)** $\rightarrow$ **Phụ đề nội bộ (Local Captions)** $\rightarrow$ Nhập file `.srt` $\rightarrow$ Bấm **Đọc văn bản (Text-to-Speech)** và bật *"Đồng bộ giọng đọc với phụ đề"*.
