@@ -2,6 +2,7 @@ const STORAGE_KEY_API = "lensai_gemini_api_key";
 const STORAGE_KEY_VIP = "lensai_vip_code";
 const STORAGE_KEY_DEVICE = "lensai_device_id";
 const STORAGE_KEY_HISTORY = "lensai_video_history";
+const STORAGE_KEY_MODEL = "lensai_selected_model";
 
 export const StorageService = {
   getDeviceId(): string {
@@ -85,8 +86,21 @@ export const StorageService = {
     try {
       localStorage.removeItem(STORAGE_KEY_HISTORY);
       localStorage.removeItem(STORAGE_KEY_API);
+      localStorage.removeItem(STORAGE_KEY_MODEL);
     } catch {
       // ignore
+    }
+  },
+
+  getSelectedModel(): string {
+    return localStorage.getItem(STORAGE_KEY_MODEL) || "";
+  },
+
+  setSelectedModel(model: string): void {
+    if (model && model.trim()) {
+      localStorage.setItem(STORAGE_KEY_MODEL, model.trim());
+    } else {
+      localStorage.removeItem(STORAGE_KEY_MODEL);
     }
   },
 };

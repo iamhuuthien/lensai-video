@@ -54,6 +54,14 @@ export interface Plan {
   badge?: string;
   popular?: boolean;
   features: string[];
+  model_tier?: string;
+}
+
+export interface ModelInfo {
+  name: string;
+  tier: string;
+  badge: string;
+  description: string;
 }
 
 export interface TrialStatus {

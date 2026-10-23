@@ -66,26 +66,38 @@ export const ApiService = {
     return request<SystemFeatures>("/api/features");
   },
 
+  async checkHealth(): Promise<{ status: string; version: string; has_server_api_key: boolean }> {
+    return request<{ status: string; version: string; has_server_api_key: boolean }>("/api/health");
+  },
+
+  async getModels(): Promise<{ status: string; models: Record<string, any>; default_free: string; default_vip: string }> {
+    return request<{ status: string; models: Record<string, any>; default_free: string; default_vip: string }>("/api/models");
+  },
+
   async analyzeVideo(url: string, mode: AnalysisMode): Promise<AnalysisResult> {
     const apiKey = StorageService.getApiKey();
+    const model = StorageService.getSelectedModel();
     return request<AnalysisResult>("/api/analyze", {
       method: "POST",
       body: JSON.stringify({
         url,
         mode,
         api_key: apiKey || undefined,
+        model: model || undefined,
       }),
     });
   },
 
   async chatVideo(sessionId: string, question: string): Promise<{ answer: string }> {
     const apiKey = StorageService.getApiKey();
+    const model = StorageService.getSelectedModel();
     return request<{ answer: string }>("/api/chat", {
       method: "POST",
       body: JSON.stringify({
         session_id: sessionId,
         question,
         api_key: apiKey || undefined,
+        model: model || undefined,
       }),
     });
   },
@@ -100,6 +112,7 @@ export const ApiService = {
         badge?: string;
         popular?: boolean;
         features?: string[];
+        model_tier?: string;
       }>;
     }
     const data = await request<BackendPlansResponse>("/api/pro/plans");
@@ -114,6 +127,7 @@ export const ApiService = {
       badge: p.badge,
       popular: p.popular,
       features: p.features || [],
+      model_tier: p.model_tier,
     }));
   },
 
@@ -232,5 +246,52 @@ export const ApiService = {
       method: "POST",
       body: JSON.stringify({ title, raw_summary: rawSummary }),
     });
+  },
+
+  async uploadStudioVideo(
+    file: File,
+    lang: string = "vi",
+    tone: string = "viral",
+    note: string = ""
+  ): Promise<{
+    status: string;
+    session_id: string;
+    stream_url: string;
+    video_filename: string;
+    title: string;
+    model_used: string;
+    editing_advice: string;
+    srt_filename: string;
+    srt_content: string;
+    pro_status?: any;
+    trial_status?: any;
+  }> {
+    const deviceId = StorageService.getDeviceId();
+    const vipCode = StorageService.getVipCode();
+    const headers: Record<string, string> = {
+      "X-Device-Id": deviceId,
+      "X-Filename": encodeURIComponent(file.name),
+      "X-Target-Lang": lang,
+      "X-Voice-Tone": tone,
+      "X-Custom-Note": encodeURIComponent(note),
+    };
+    if (vipCode) headers["X-VIP-Code"] = vipCode;
+
+    const res = await fetch("/api/pro/upload-studio", {
+      method: "POST",
+      headers,
+      body: file,
+    });
+    if (res.status === 402) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err.detail || "Bạn đã hết lượt xuất file .SRT miễn phí trong tháng này.";
+      notifyTrialExhausted(msg);
+      throw new Error(msg);
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Tải video lên thất bại (${res.status})`);
+    }
+    return res.json();
   },
 };

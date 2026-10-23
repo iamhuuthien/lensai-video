@@ -11,6 +11,7 @@ class AnalyzeRequest(BaseModel):
     mode: str = "explain"
     prompt: Optional[str] = None
     api_key: Optional[str] = None
+    model: Optional[str] = None
 
 
 class ChatRequest(BaseModel):
@@ -18,6 +19,7 @@ class ChatRequest(BaseModel):
     question: str
     api_key: Optional[str] = None
     context_fallback: Optional[dict] = None
+    model: Optional[str] = None
 
 
 class ShortcutRequest(BaseModel):
@@ -25,3 +27,4 @@ class ShortcutRequest(BaseModel):
     mode: str = "explain"
     prompt: Optional[str] = None
     api_key: Optional[str] = None
+    model: Optional[str] = None

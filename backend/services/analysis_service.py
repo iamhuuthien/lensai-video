@@ -38,6 +38,7 @@ async def run_analysis(req: AnalyzeRequest) -> Dict[str, Any]:
             mode=req.mode,
             custom_prompt=req.prompt,
             api_key=req.api_key,
+            model=req.model,
         )
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=str(exc))
@@ -57,6 +58,7 @@ async def run_chat(req: ChatRequest) -> Dict[str, Any]:
             question=req.question,
             api_key=req.api_key,
             context_fallback=req.context_fallback,
+            model=req.model,
         )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

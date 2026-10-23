@@ -13,19 +13,51 @@ logger = logging.getLogger(__name__)
 # Bộ nhớ đệm phiên làm việc
 SESSIONS: Dict[str, Dict[str, Any]] = {}
 
-# Ưu tiên các dòng Model PRO mạnh nhất trước để phân tích sâu, sau đó mới fallback sang Flash
+# Danh mục các model được hỗ trợ chính thức và tối ưu hóa
+SUPPORTED_MODELS: Dict[str, Dict[str, str]] = {
+    "gemini-2.5-flash": {
+        "name": "Gemini 2.5 Flash",
+        "tier": "free_trial",
+        "badge": "⚡ Siêu tốc",
+        "description": "Tốc độ phản hồi cực nhanh, tối ưu hạn ngạch (Dành cho gói Dùng thử / Free).",
+    },
+    "gemini-2.5-pro": {
+        "name": "Gemini 2.5 Pro",
+        "tier": "vip",
+        "badge": "🧠 Cao cấp nhất",
+        "description": "Mô hình mạnh nhất của Google, tư duy chuyên sâu & thị giác đa tầng (Dành cho gói VIP).",
+    },
+    "gemini-2.0-flash": {
+        "name": "Gemini 2.0 Flash",
+        "tier": "fallback",
+        "badge": "⚡ Nhanh & Ổn định",
+        "description": "Bản Flash thế hệ 2 tốc độ cao dự phòng.",
+    },
+    "gemini-1.5-pro": {
+        "name": "Gemini 1.5 Pro",
+        "tier": "fallback_pro",
+        "badge": "🧠 Ngữ cảnh lớn",
+        "description": "Bản Pro ngữ cảnh lớn dự phòng.",
+    },
+    "gemini-1.5-flash": {
+        "name": "Gemini 1.5 Flash",
+        "tier": "fallback",
+        "badge": "⚡ Tiết kiệm",
+        "description": "Bản Flash nhẹ dự phòng.",
+    },
+}
+
+# Dòng PRO: Chuyên sâu, phân tích chi tiết hình ảnh & chữ, tư duy đa tầng (cho VIP)
 PRIORITY_PRO_MODELS: List[str] = [
-    "gemini-3.8-pro",
-    "gemini-3.8-pro-preview",
-    "gemini-3.5-pro",
-    "gemini-3.0-pro",
     "gemini-2.5-pro",
+    "gemini-1.5-pro",
 ]
 
+# Dòng FLASH: Tốc độ cao, tối ưu chi phí & hạn ngạch (cho người dùng Dùng thử / Free)
 FALLBACK_FLASH_MODELS: List[str] = [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash",
-    "gemini-3.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
 ]
 
 # Cache danh sách model theo từng API key, và thời điểm model được dùng lại sau khi bị lỗi.
@@ -120,13 +152,14 @@ def _model_preference() -> str:
     return os.environ.get("LENSAI_MODEL_PREFERENCE", "pro").strip().lower()
 
 
-def _discover_ranked_models(client: genai.Client) -> List[str]:
+def _discover_ranked_models(client: genai.Client, preference: Optional[str] = None) -> List[str]:
     """
     Lấy danh sách model khả dụng từ tài khoản Gemini API và sắp xếp ưu tiên.
-    Mặc định: model dòng PRO trước, FLASH làm dự phòng. Với LENSAI_MODEL_PREFERENCE=flash thì ngược lại.
-    Kết quả được cache theo từng API key.
+    - preference: 'flash' (tiết kiệm, siêu tốc), 'pro' (mạnh nhất), hoặc tên model cụ thể (VD: 'gemini-2.5-pro').
+    Kết quả được cache theo từng API key và preference.
     """
-    cache_key = f"{_key_id(client)}:{_model_preference()}"
+    pref = (preference or _model_preference() or "pro").strip().lower()
+    cache_key = f"{_key_id(client)}:{pref}"
     with _state_lock:
         cached = _MODELS_CACHE.get(cache_key)
     if cached:
@@ -141,7 +174,8 @@ def _discover_ranked_models(client: genai.Client) -> List[str]:
             low = name.lower()
             if not low.startswith("gemini"):
                 continue
-            if any(skip in low for skip in ["tts", "image", "embedding", "aqa", "vision-latest", "1.0", "1.5", "2.0", "2.5"]):
+            # Chỉ loại bỏ các model chuyên dụng không phải multimodal chat
+            if any(skip in low for skip in ["tts", "imagen", "embedding", "aqa", "vision-latest", "1.0"]):
                 continue
             if "pro" in low:
                 pro_models.append(name)
@@ -154,10 +188,15 @@ def _discover_ranked_models(client: genai.Client) -> List[str]:
     pro_models.sort(reverse=True)
     flash_models.sort(reverse=True)
 
-    if _model_preference() == "flash":
-        ordered = flash_models + FALLBACK_FLASH_MODELS + pro_models + PRIORITY_PRO_MODELS
+    ordered: List[str] = []
+    # Nếu người dùng chỉ định đích danh một model được hỗ trợ:
+    if pref in SUPPORTED_MODELS or pref.startswith("gemini-"):
+        ordered.append(pref)
+
+    if pref == "flash" or "flash" in pref:
+        ordered += flash_models + FALLBACK_FLASH_MODELS + pro_models + PRIORITY_PRO_MODELS
     else:
-        ordered = pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS
+        ordered += pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS
 
     combined: List[str] = []
     for candidate in ordered:
@@ -168,7 +207,7 @@ def _discover_ranked_models(client: genai.Client) -> List[str]:
         if len(_MODELS_CACHE) > 200:  # tránh phình bộ nhớ khi có rất nhiều key khác nhau
             _MODELS_CACHE.clear()
         _MODELS_CACHE[cache_key] = combined
-    logger.info(f"Thứ tự ưu tiên model ({_model_preference()}): {combined[:6]}")
+    logger.info(f"Thứ tự ưu tiên model ({pref}): {combined[:6]}")
     return combined
 
 
@@ -259,16 +298,17 @@ def _generate_with_best_model(
     client: genai.Client,
     contents: List[Any],
     system_instruction: str,
+    model_preference: Optional[str] = None,
 ) -> Tuple[str, str]:
     """
-    Ưu tiên gọi Model PRO mạnh nhất hiện có để phân tích sâu.
+    Ưu tiên gọi Model phù hợp theo model_preference (hoặc Pro mạnh nhất) để phân tích sâu.
     Trả về (response_text, model_used).
     """
     config = types.GenerateContentConfig(
         system_instruction=system_instruction,
         temperature=0.35,
     )
-    ranked_models = _discover_ranked_models(client)
+    ranked_models = _discover_ranked_models(client, preference=model_preference)
     key_id = _key_id(client)
 
     now = time.time()
@@ -306,9 +346,10 @@ def analyze_video_with_ai(
     mode: str = "explain",
     custom_prompt: Optional[str] = None,
     api_key: Optional[str] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Phân tích video bằng model Gemini mạnh nhất (ưu tiên dòng Pro),
+    Phân tích video bằng model Gemini mạnh nhất (ưu tiên dòng Pro hoặc model được chọn),
     xác định đoạn thời gian hướng dẫn trọng tâm khớp với tiêu đề nhất,
     và tự động mở rộng kiến thức chuyên sâu về chủ đề đó.
     """
@@ -347,6 +388,7 @@ def analyze_video_with_ai(
         client=client,
         contents=[video_part, prompt_text],
         system_instruction=system_instruction,
+        model_preference=model,
     )
 
     key_segment, cleaned_explanation = extract_key_segment(raw_explanation)
@@ -413,6 +455,7 @@ def chat_about_video(
     question: str,
     api_key: Optional[str] = None,
     context_fallback: Optional[Dict[str, Any]] = None,
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Trả lời câu hỏi tiếp theo của người dùng về video hoặc mở rộng sâu hơn về chủ đề."""
     session = SESSIONS.get(session_id) or _restore_session_from_disk(session_id)
@@ -473,6 +516,7 @@ def chat_about_video(
         client=client,
         contents=contents,
         system_instruction=system_instruction,
+        model_preference=model,
     )
 
     session["history"].append({"role": "user", "text": question.strip()})

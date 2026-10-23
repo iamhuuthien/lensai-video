@@ -17,6 +17,18 @@ async def health_check() -> dict:
     }
 
 
+@router.get("/models")
+async def list_models() -> dict:
+    """Trả về danh mục AI model được hỗ trợ chính thức, phân tầng theo gói dịch vụ."""
+    from backend.services.ai_service import SUPPORTED_MODELS
+    return {
+        "status": "ok",
+        "models": SUPPORTED_MODELS,
+        "default_free": "gemini-2.5-flash",
+        "default_vip": "gemini-2.5-pro",
+    }
+
+
 @router.get("/features")
 async def get_features() -> dict:
     """Tells the SPA which extensions are active (community mode reports ``pro: false``)."""
