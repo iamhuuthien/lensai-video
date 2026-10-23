@@ -34,7 +34,7 @@ STATIC_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(
     title="LensAI — Giải thích & Mở rộng Kiến thức Video (Pro)",
     description="Công cụ AI xem trực tiếp video, tìm đoạn hướng dẫn trọng tâm, lưu video theo tên + session và mở rộng kiến thức chuyên sâu.",
-    version="2.0.0",
+    version="3.2.0",
 )
 
 app.add_middleware(
