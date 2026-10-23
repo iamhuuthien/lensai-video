@@ -72,6 +72,44 @@ html {
   font-size: 16px;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+/* Apple macOS Custom Dark Glass Scrollbar (No ugly white track or arrow buttons) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent !important;
+  margin: 14px 0;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(41, 151, 255, 0.65);
 }
 
 body {

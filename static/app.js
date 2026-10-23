@@ -24,11 +24,14 @@ async function loadExtensionScript() {
     const res = await fetch("/api/features");
     if (!res.ok) return;
     const data = await res.json();
+    if (data && data.pro) {
+      window.LensAI.proEnabled = true;
+    }
     if (data.frontend_script) {
       await new Promise((resolve) => {
         const s = document.createElement("script");
         const sep = data.frontend_script.includes("?") ? "&" : "?";
-        s.src = `${data.frontend_script}${sep}v=3.1`;
+        s.src = `${data.frontend_script}${sep}v=3.2`;
         s.onload = resolve;
         s.onerror = resolve; // never block the app if the add-on fails to load
         document.body.appendChild(s);
@@ -288,7 +291,7 @@ async function handleAnalyzeVideo() {
   }
 
   const apiKey = getStoredApiKey();
-  if (!serverHasApiKey && !apiKey) {
+  if (!serverHasApiKey && !apiKey && !(window.LensAI && window.LensAI.proEnabled)) {
     settingsModal.classList.add("open");
     showError("Bạn cần nhập Mã VIP hoặc Gemini API Key trong phần Cài đặt trước khi phân tích.");
     return;
