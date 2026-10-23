@@ -17,3 +17,6 @@ serviceAccount*.json
 *.pem
 .firebase/
 pro_data/
+.agents/
+.agy/
+
