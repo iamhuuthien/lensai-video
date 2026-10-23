@@ -170,8 +170,8 @@ export const ApiService = {
     };
   },
 
-  async verifyVipPass(code: string): Promise<{ valid: boolean; plan?: string; expires_at?: string; message?: string }> {
-    return request<{ valid: boolean; plan?: string; expires_at?: string; message?: string }>(
+  async verifyVipPass(code: string): Promise<{ valid?: boolean; pass?: any; status?: string; plan?: string; expires_at?: string; message?: string }> {
+    return request<{ valid?: boolean; pass?: any; status?: string; plan?: string; expires_at?: string; message?: string }>(
       `/api/pro/pass/${encodeURIComponent(code)}`
     );
   },

@@ -172,11 +172,14 @@ export function useBillingController() {
 
       try {
         const res = await ApiService.verifyVipPass(clean);
-        if (res.valid) {
+        const isValid = res.valid === true || Boolean(res.pass && !res.pass.is_expired && res.pass.active);
+        if (isValid) {
           StorageService.setVipCode(clean);
           setVipCode(clean);
           setIsVip(true);
-          setStatusMessage("Kích hoạt mã VIP thành công! Cảm ơn bạn.");
+          const credits = res.pass?.credits_remaining ?? res.pass?.credits_total;
+          const creditMsg = credits !== undefined ? ` (Còn ${credits} credits)` : "";
+          setStatusMessage(`Kích hoạt mã VIP thành công!${creditMsg}`);
           refreshTrialStatus();
           setPricingOpen(false);
         } else {

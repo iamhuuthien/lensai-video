@@ -14,6 +14,8 @@ lensai_pro/
 static/pro/
 serviceAccount*.json
 *-firebase-adminsdk-*.json
+*firebase*.json
+lensai-video-firebase-adminsdk.json
 *.pem
 .firebase/
 pro_data/
