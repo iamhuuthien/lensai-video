@@ -294,4 +294,67 @@ export const ApiService = {
     }
     return res.json();
   },
+
+  async downloadCleanVideo(url: string): Promise<{
+    status: string;
+    session_id: string;
+    title: string;
+    filename: string;
+    platform: string;
+    duration: number;
+    thumbnail: string;
+    stream_url: string;
+    download_url: string;
+    message: string;
+  }> {
+    return request("/api/clean-download", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    });
+  },
+
+  async getCloudHistory(): Promise<Array<{
+    session_id: string;
+    url: string;
+    title: string;
+    thumbnail: string;
+    platform: string;
+    duration: number;
+    days_remaining: number;
+    is_expiring_soon: boolean;
+    stream_url: string;
+    download_url: string;
+  }>> {
+    const res = await request<{ status: string; items: any[] }>("/api/history");
+    return res.items || [];
+  },
+
+  async saveCloudHistory(item: {
+    session_id: string;
+    url: string;
+    title?: string;
+    thumbnail?: string;
+    platform?: string;
+    duration?: number;
+    has_srt?: boolean;
+  }): Promise<void> {
+    try {
+      await request("/api/history", {
+        method: "POST",
+        body: JSON.stringify(item),
+      });
+    } catch {
+      // ignore history background sync errors
+    }
+  },
+
+  async deleteCloudHistory(sessionId: string): Promise<void> {
+    try {
+      await request(`/api/history/${encodeURIComponent(sessionId)}`, {
+        method: "DELETE",
+      });
+    } catch {
+      // ignore
+    }
+  },
 };

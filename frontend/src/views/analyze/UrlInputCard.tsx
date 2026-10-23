@@ -15,11 +15,13 @@ import LinkIcon from "@mui/icons-material/Link";
 import ContentPasteIcon from "@mui/icons-material/ContentPaste";
 import CloseIcon from "@mui/icons-material/Close";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import DownloadForOfflineIcon from "@mui/icons-material/DownloadForOffline";
 import BoltIcon from "@mui/icons-material/Bolt";
 import PsychologyIcon from "@mui/icons-material/Psychology";
 import SchoolIcon from "@mui/icons-material/School";
 import MovieCreationIcon from "@mui/icons-material/MovieCreation";
 import HistoryIcon from "@mui/icons-material/History";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import type { AnalysisMode } from "../../models/types";
 import { APPLE_PALETTE } from "../../theme/theme";
 import { SpotlightCard } from "../common/SpotlightCard";
@@ -30,9 +32,11 @@ interface UrlInputCardProps {
   mode: AnalysisMode;
   setMode: (mode: AnalysisMode) => void;
   loading: boolean;
+  downloadLoading?: boolean;
   error: string | null;
   history: string[];
   onAnalyze: (targetUrl?: string, targetMode?: AnalysisMode) => void;
+  onDownloadClean?: () => void;
   onClear: () => void;
   onPaste: () => void;
 }
@@ -50,25 +54,28 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
   mode,
   setMode,
   loading,
+  downloadLoading = false,
   error,
   history,
   onAnalyze,
+  onDownloadClean,
   onClear,
   onPaste,
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !loading && url.trim()) {
+    if (e.key === "Enter" && !loading && !downloadLoading && url.trim()) {
       onAnalyze();
     }
   };
 
   return (
     <SpotlightCard
+      id="url-input-tool"
       spotlightColor="rgba(0, 113, 227, 0.16)"
       hoverBorderColor="rgba(41, 151, 255, 0.4)"
       sx={{
         p: { xs: 2.5, sm: 3.5 },
-        maxWidth: 840,
+        maxWidth: 880,
         mx: "auto",
         mb: 4,
         borderRadius: "22px",
@@ -83,7 +90,7 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
           onChange={(e) => setUrl(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Dán link video TikTok, Shorts, Reels hoặc YouTube..."
-          disabled={loading}
+          disabled={loading || downloadLoading}
           slotProps={{
             input: {
               startAdornment: (
@@ -120,12 +127,12 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
         />
       </Box>
 
-      {/* Mode Selector & Analyze CTA */}
+      {/* Mode Selector & Dual Action CTAs */}
       <Stack
-        direction={{ xs: "column", sm: "row" }}
+        direction={{ xs: "column", lg: "row" }}
         spacing={2}
         sx={{
-          alignItems: { xs: "stretch", sm: "center" },
+          alignItems: { xs: "stretch", lg: "center" },
           justifyContent: "space-between",
         }}
       >
@@ -161,28 +168,61 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
           })}
         </Stack>
 
-        {/* CTA Button */}
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          disabled={loading || !url.trim()}
-          onClick={() => onAnalyze()}
-          startIcon={loading ? <CircularProgress size={18} color="inherit" /> : <PlayArrowIcon />}
-          sx={{
-            minWidth: 160,
-            py: 1.2,
-            px: 3,
-            fontSize: "0.9375rem",
-            fontWeight: 600,
-            transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
-            "&:active": {
-              transform: "scale(0.96)",
-            },
-          }}
-        >
-          {loading ? "Đang xử lý..." : "Phân tích ngay"}
-        </Button>
+        {/* Dual Actions: 0d Clean Download + AI Analysis */}
+        <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: "center" }}>
+          {/* Clean Download Button - 0d Free */}
+          {onDownloadClean && (
+            <Button
+              variant="outlined"
+              size="medium"
+              disabled={loading || downloadLoading || !url.trim()}
+              onClick={onDownloadClean}
+              startIcon={downloadLoading ? <CircularProgress size={16} color="inherit" /> : <DownloadForOfflineIcon />}
+              sx={{
+                fontWeight: 700,
+                fontSize: "0.85rem",
+                py: 1,
+                px: 2,
+                color: "#30d158",
+                borderColor: "rgba(48, 209, 88, 0.4)",
+                bgcolor: "rgba(48, 209, 88, 0.08)",
+                whiteSpace: "nowrap",
+                transition: "all 0.18s ease",
+                "&:hover": {
+                  borderColor: "#30d158",
+                  bgcolor: "rgba(48, 209, 88, 0.16)",
+                  boxShadow: "0 2px 14px rgba(48, 209, 88, 0.25)",
+                },
+                "&:active": { transform: "scale(0.96)" },
+              }}
+            >
+              {downloadLoading ? "Đang tải video..." : "Tải Không Logo (0đ Free)"}
+            </Button>
+          )}
+
+          {/* AI Analysis CTA Button */}
+          <Button
+            variant="contained"
+            color="primary"
+            size="medium"
+            disabled={loading || downloadLoading || !url.trim()}
+            onClick={() => onAnalyze()}
+            startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon />}
+            sx={{
+              fontWeight: 700,
+              fontSize: "0.85rem",
+              py: 1,
+              px: 2.5,
+              whiteSpace: "nowrap",
+              transition: "all 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)",
+              "&:active": {
+                transform: "scale(0.96)",
+              },
+            }}
+          >
+            {loading ? "Đang phân tích..." : "Phân tích AI & Xuất .SRT"}
+          </Button>
+        </Stack>
       </Stack>
 
       {/* Error alert */}
@@ -203,17 +243,17 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
         </Alert>
       )}
 
-      {/* Recent history */}
+      {/* Recent history & 15-day retention notice */}
       {history.length > 0 && !loading && (
         <Box sx={{ mt: 2.5, pt: 2, borderTop: `1px solid ${APPLE_PALETTE.hairline}` }}>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
             <HistoryIcon sx={{ fontSize: 14, color: APPLE_PALETTE.inkMuted }} />
             <Typography variant="caption" sx={{ color: APPLE_PALETTE.inkMuted, fontSize: "0.75rem" }}>
-              Video đã phân tích gần đây:
+              Video đã thao tác gần đây:
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-            {history.slice(0, 3).map((histItem, idx) => {
+          <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap", mb: 1.5 }}>
+            {history.slice(0, 4).map((histItem, idx) => {
               const cleanUrl = typeof histItem === "string" ? histItem : String((histItem as { video?: { url?: string }; url?: string })?.video?.url || (histItem as { url?: string })?.url || "");
               if (!cleanUrl) return null;
 
@@ -247,6 +287,23 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
               );
             })}
           </Stack>
+
+          {/* 15-day Inactivity Storage Notice */}
+          <Alert
+            severity="info"
+            icon={<InfoOutlinedIcon sx={{ fontSize: 16, color: APPLE_PALETTE.skyLink }} />}
+            sx={{
+              py: 0.3,
+              px: 1.5,
+              backgroundColor: "rgba(0, 113, 227, 0.06)",
+              color: "#c8e1ff",
+              border: "1px solid rgba(0, 113, 227, 0.18)",
+              borderRadius: "10px",
+              "& .MuiAlert-message": { fontSize: "0.75rem", lineHeight: 1.35 },
+            }}
+          >
+            <strong>Thông báo lưu trữ:</strong> Video phân tích miễn phí được lưu trên đám mây trong 15 ngày. Sau 15 ngày không dùng hệ thống sẽ tự động dọn dẹp để tối ưu bộ nhớ. Bạn có thể tải file về máy hoặc gia hạn theo gói VIP để lưu trữ vĩnh viễn.
+          </Alert>
         </Box>
       )}
     </SpotlightCard>

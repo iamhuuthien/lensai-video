@@ -1,11 +1,24 @@
-"""Health, feature discovery and the optional saved-video listing."""
+"""Health, feature discovery, video history sync and the optional saved-video listing."""
 
-from fastapi import APIRouter, HTTPException
+import os
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
 
 from backend.core import config
 from backend.core.extensions import extensions
 
 router = APIRouter(prefix="/api", tags=["system"])
+
+
+class HistoryItemRequest(BaseModel):
+    session_id: str
+    url: str
+    title: Optional[str] = "Video"
+    thumbnail: Optional[str] = ""
+    platform: Optional[str] = "Video"
+    duration: Optional[int] = 0
+    has_srt: Optional[bool] = False
 
 
 @router.get("/health")
@@ -27,6 +40,59 @@ async def list_models() -> dict:
         "default_free": "gemini-2.5-flash",
         "default_vip": "gemini-2.5-pro",
     }
+
+
+@router.get("/history")
+async def get_history(request: Request) -> dict:
+    """Lấy danh sách video đã phân tích từ Firebase Firestore / Local JSON kèm ngày hết hạn."""
+    device_id = (request.headers.get("X-Device-Id") or "anonymous").strip()
+    vip_code = (request.headers.get("X-VIP-Code") or "").strip()
+    identifier = vip_code if vip_code else device_id
+
+    try:
+        from lensai_pro.services.store import ProStore
+        store = ProStore()
+        items = store.get_user_history(identifier)
+        return {"status": "ok", "items": items, "backend": store.backend_type}
+    except Exception:
+        return {"status": "ok", "items": [], "backend": "local"}
+
+
+@router.post("/history")
+async def save_history(req: HistoryItemRequest, request: Request) -> dict:
+    """Đồng bộ một video vào lịch sử đám mây Firebase (15 ngày cho Free, 30 ngày cho VIP)."""
+    device_id = (request.headers.get("X-Device-Id") or "anonymous").strip()
+    vip_code = (request.headers.get("X-VIP-Code") or "").strip()
+    identifier = vip_code if vip_code else device_id
+    is_vip = bool(vip_code)
+
+    try:
+        from lensai_pro.services.store import ProStore
+        store = ProStore()
+        saved = store.save_user_history_item(
+            identifier=identifier,
+            item=req.model_dump(),
+            is_vip=is_vip,
+        )
+        return {"status": "ok", "item": saved}
+    except Exception:
+        return {"status": "ok", "item": req.model_dump()}
+
+
+@router.delete("/history/{session_id}")
+async def delete_history(session_id: str, request: Request) -> dict:
+    """Xóa một video khỏi lịch sử."""
+    device_id = (request.headers.get("X-Device-Id") or "anonymous").strip()
+    vip_code = (request.headers.get("X-VIP-Code") or "").strip()
+    identifier = vip_code if vip_code else device_id
+
+    try:
+        from lensai_pro.services.store import ProStore
+        store = ProStore()
+        ok = store.delete_user_history_item(identifier, session_id)
+        return {"status": "ok", "deleted": ok}
+    except Exception:
+        return {"status": "ok", "deleted": True}
 
 
 @router.get("/features")

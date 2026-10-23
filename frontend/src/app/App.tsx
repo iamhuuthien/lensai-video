@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ThemeProvider, CssBaseline, Box, Container, Snackbar, Alert } from "@mui/material";
+import { ThemeProvider, CssBaseline, Box, Container, Snackbar, Alert, Button } from "@mui/material";
 import { theme } from "../theme/theme";
 import { Navbar } from "../views/layout/Navbar";
 import { Hero } from "../views/layout/Hero";
@@ -25,6 +25,8 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [shortcutOpen, setShortcutOpen] = useState<boolean>(false);
+  const [downloadLoading, setDownloadLoading] = useState<boolean>(false);
+  const [cleanDownloadSuccess, setCleanDownloadSuccess] = useState<string | null>(null);
 
   const billing = useBillingController();
   const analyze = useAnalyzeController(() => billing.setPricingOpen(true));
@@ -46,6 +48,45 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleCleanDownload = async () => {
+    if (!analyze.url.trim()) return;
+    setDownloadLoading(true);
+    try {
+      const res = await ApiService.downloadCleanVideo(analyze.url.trim());
+      // Trigger native file download
+      const a = document.createElement("a");
+      a.href = res.download_url;
+      a.download = res.filename || "Video_Clean.mp4";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+
+      setCleanDownloadSuccess(`Đã tải video không logo: "${res.title.slice(0, 35)}..."`);
+
+      // Save into cloud history (15 days retention)
+      ApiService.saveCloudHistory({
+        session_id: res.session_id,
+        url: analyze.url.trim(),
+        title: res.title,
+        thumbnail: res.thumbnail,
+        platform: res.platform,
+        duration: res.duration,
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Không thể tải video lúc này.";
+      billing.setStatusMessage(msg);
+    } finally {
+      setDownloadLoading(false);
+    }
+  };
+
+  const handleScrollToTool = () => {
+    const el = document.getElementById("url-input-tool");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -64,10 +105,16 @@ export const App: React.FC = () => {
         {/* Main Content */}
         <Box component="main" sx={{ flex: 1, py: { xs: 2, sm: 4 } }}>
           <Container maxWidth="lg">
-            {/* Tab 0: Video Analysis */}
+            {/* Tab 0: Video Analysis & Clean Download */}
             {activeTab === 0 && (
               <Box>
-                <Hero />
+                <Hero
+                  onSelectSampleUrl={(sampleUrl) => {
+                    analyze.setUrl(sampleUrl);
+                    handleScrollToTool();
+                  }}
+                  onScrollToTool={handleScrollToTool}
+                />
 
                 <UrlInputCard
                   url={analyze.url}
@@ -75,9 +122,11 @@ export const App: React.FC = () => {
                   mode={analyze.mode}
                   setMode={analyze.setMode}
                   loading={analyze.loading}
+                  downloadLoading={downloadLoading}
                   error={analyze.error}
                   history={analyze.history}
                   onAnalyze={analyze.handleAnalyze}
+                  onDownloadClean={handleCleanDownload}
                   onClear={analyze.handleClear}
                   onPaste={analyze.handlePaste}
                 />
@@ -124,10 +173,10 @@ export const App: React.FC = () => {
               </Box>
             )}
 
-            {/* Tab 1: Studio Creator */}
+            {/* Tab 1: Creator Studio (.SRT) */}
             {activeTab === 1 && <StudioTab />}
 
-            {/* Tab 2: Free Hub 0đ */}
+            {/* Tab 2: Free Tools Hub */}
             {activeTab === 2 && <FreeHubTab />}
           </Container>
         </Box>
@@ -135,7 +184,7 @@ export const App: React.FC = () => {
         {/* Footer */}
         <Footer />
 
-        {/* Dialogs */}
+        {/* Modals & Dialogs */}
         <SettingsDialog
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}
@@ -175,6 +224,35 @@ export const App: React.FC = () => {
             sx={{ width: "100%", borderRadius: "12px", boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}
           >
             {billing.statusMessage}
+          </Alert>
+        </Snackbar>
+
+        {/* Clean Download Success Toast with Conversion Action */}
+        <Snackbar
+          open={Boolean(cleanDownloadSuccess)}
+          autoHideDuration={7000}
+          onClose={() => setCleanDownloadSuccess(null)}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        >
+          <Alert
+            onClose={() => setCleanDownloadSuccess(null)}
+            severity="success"
+            action={
+              <Button
+                color="inherit"
+                size="small"
+                onClick={() => {
+                  setCleanDownloadSuccess(null);
+                  analyze.handleAnalyze();
+                }}
+                sx={{ fontWeight: 700, textDecoration: "underline" }}
+              >
+                Phân tích AI ngay
+              </Button>
+            }
+            sx={{ width: "100%", borderRadius: "12px", boxShadow: "0 8px 24px rgba(0,0,0,0.6)" }}
+          >
+            {cleanDownloadSuccess}
           </Alert>
         </Snackbar>
       </Box>
