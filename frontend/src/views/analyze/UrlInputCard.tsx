@@ -206,22 +206,26 @@ export const UrlInputCard: React.FC<UrlInputCardProps> = ({
             </Typography>
           </Stack>
           <Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: "wrap" }}>
-            {history.slice(0, 3).map((histUrl, idx) => {
-              let display = histUrl;
+            {history.slice(0, 3).map((histItem, idx) => {
+              const cleanUrl = typeof histItem === "string" ? histItem : String((histItem as { video?: { url?: string }; url?: string })?.video?.url || (histItem as { url?: string })?.url || "");
+              if (!cleanUrl) return null;
+
+              let display = cleanUrl;
               try {
-                const u = new URL(histUrl);
-                display = `${u.hostname}${u.pathname.slice(0, 16)}...`;
+                const u = new URL(cleanUrl);
+                display = `${u.hostname}${String(u.pathname || "").slice(0, 16)}...`;
               } catch {
-                display = histUrl.slice(0, 24) + "...";
+                display = String(cleanUrl).slice(0, 24) + "...";
               }
+
               return (
                 <Chip
                   key={idx}
                   label={display}
                   size="small"
                   onClick={() => {
-                    setUrl(histUrl);
-                    onAnalyze(histUrl);
+                    setUrl(cleanUrl);
+                    onAnalyze(cleanUrl);
                   }}
                   sx={{
                     fontSize: "0.6875rem",
