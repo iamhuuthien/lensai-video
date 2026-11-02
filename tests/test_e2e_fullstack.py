@@ -22,14 +22,14 @@ def fullstack(tmp_path, monkeypatch):
     monkeypatch.delenv("RENDER", raising=False)
 
     monkeypatch.setenv("LENSAI_PRO_LEDGER_PATH", str(tmp_path / "e2e_ledger.json"))
-    monkeypatch.setenv("GEMINI_API_KEY", "LENSAI_DEMO_MASTER_KEY")
-    monkeypatch.setenv("MASTER_GEMINI_API_KEY", "LENSAI_DEMO_MASTER_KEY")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-demo-key")
+    monkeypatch.setenv("MASTER_GEMINI_API_KEY", "test-demo-key")
     monkeypatch.setenv("LENSAI_DEMO_MODE", "1")
-    monkeypatch.setenv("LENSAI_ADMIN_SECRET", "LENSAI-ADMIN-2026")
-    monkeypatch.setenv("SEPAY_WEBHOOK_API_KEY", "SEPAY-SECRET-2026")
+    monkeypatch.setenv("LENSAI_ADMIN_SECRET", "test-admin-secret-fixture")
+    monkeypatch.setenv("SEPAY_WEBHOOK_API_KEY", "test-sepay-secret-fixture")
     monkeypatch.setenv("VIETQR_BANK_ID", "MB")
-    monkeypatch.setenv("VIETQR_ACCOUNT_NO", "999915043979")
-    monkeypatch.setenv("VIETQR_ACCOUNT_NAME", "NGUYEN HUU THIEN")
+    monkeypatch.setenv("VIETQR_ACCOUNT_NO", "0000123456")
+    monkeypatch.setenv("VIETQR_ACCOUNT_NAME", "TEST MERCHANT")
 
     lensai_pro._store = None
     fresh_ext = Extensions()
@@ -151,7 +151,7 @@ def test_e2e_04_vietqr_order_sepay_webhook_and_vip_activation_flow(fullstack):
     wh_res = client.post(
         "/api/pro/webhook/sepay",
         json={"transferType": "in", "transferAmount": 169_000, "content": f"CHUYEN KHOAN {order_code}"},
-        headers={"Authorization": "Apikey SEPAY-SECRET-2026"},
+        headers={"Authorization": "Apikey test-sepay-secret-fixture"},
     )
     assert wh_res.status_code == 200
     wh_body = wh_res.json()
@@ -186,7 +186,7 @@ def test_e2e_04_vietqr_order_sepay_webhook_and_vip_activation_flow(fullstack):
 
 def test_e2e_05_admin_portal_overview_create_toggle_confirm_and_reset(fullstack):
     client, _ = fullstack
-    admin_headers = {"X-Admin-Secret": "LENSAI-ADMIN-2026", "X-Device-Id": "DEV-ADMIN-QA"}
+    admin_headers = {"X-Admin-Secret": "test-admin-secret-fixture", "X-Device-Id": "DEV-ADMIN-QA"}
 
     # 1. Admin creates a custom VIP pass
     create_res = client.post(

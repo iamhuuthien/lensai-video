@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ThemeProvider, CssBaseline, Box, Container, Snackbar, Alert, Button } from "@mui/material";
 import { theme } from "../theme/theme";
 import { Navbar } from "../views/layout/Navbar";
@@ -27,6 +27,29 @@ export const App: React.FC = () => {
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [shortcutOpen, setShortcutOpen] = useState<boolean>(false);
   const [adminOpen, setAdminOpen] = useState<boolean>(false);
+  const [adminUnlocked, setAdminUnlocked] = useState<boolean>(
+    () =>
+      typeof window !== "undefined" &&
+      (Boolean(sessionStorage.getItem("lensai_admin_session_secret")) ||
+        window.location.search.includes("admin=1") ||
+        window.location.hash.includes("admin"))
+  );
+
+  useEffect(() => {
+    if (window.location.search.includes("admin=1") || window.location.hash.includes("admin")) {
+      setAdminUnlocked(true);
+      setAdminOpen(true);
+    }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setAdminUnlocked(true);
+        setAdminOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
   const [downloadLoading, setDownloadLoading] = useState<boolean>(false);
   const [cleanDownloadSuccess, setCleanDownloadSuccess] = useState<string | null>(null);
 
@@ -103,7 +126,7 @@ export const App: React.FC = () => {
           onOpenPricing={() => billing.setPricingOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenShortcut={() => setShortcutOpen(true)}
-          onOpenAdmin={() => setAdminOpen(true)}
+          onOpenAdmin={adminUnlocked ? () => setAdminOpen(true) : undefined}
         />
 
         {/* Main Content */}

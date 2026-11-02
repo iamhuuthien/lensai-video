@@ -395,9 +395,8 @@ def _generate_with_best_model(
 
 
 
-def _is_demo_key(api_key: Optional[str]) -> bool:
-    key = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
-    return key == "LENSAI_DEMO_MASTER_KEY" or os.environ.get("LENSAI_DEMO_MODE") == "1"
+def _is_demo_key(_api_key: Optional[str] = None) -> bool:
+    return os.environ.get("LENSAI_DEMO_MODE", "").strip() == "1"
 
 
 def _build_demo_analysis(video_info: Dict[str, Any], mode: str, model_pref: Optional[str]) -> Tuple[str, str]:

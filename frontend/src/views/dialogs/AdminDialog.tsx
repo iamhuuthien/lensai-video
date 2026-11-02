@@ -46,8 +46,7 @@ interface AdminDialogProps {
   onRefreshTrial: () => void;
 }
 
-const ADMIN_STORAGE_KEY = "lensai_admin_secret";
-const DEFAULT_DEV_SECRET = "LENSAI-ADMIN-2026";
+const ADMIN_STORAGE_KEY = "lensai_admin_session_secret";
 
 export const AdminDialog: React.FC<AdminDialogProps> = ({
   open,
@@ -56,7 +55,7 @@ export const AdminDialog: React.FC<AdminDialogProps> = ({
   onRefreshTrial,
 }) => {
   const [adminSecret, setAdminSecret] = useState<string>(
-    () => localStorage.getItem(ADMIN_STORAGE_KEY) || DEFAULT_DEV_SECRET
+    () => sessionStorage.getItem(ADMIN_STORAGE_KEY) || ""
   );
   const [authenticated, setAuthenticated] = useState<boolean>(false);
   const [tab, setTab] = useState<number>(0);
@@ -87,7 +86,7 @@ export const AdminDialog: React.FC<AdminDialogProps> = ({
       setError(null);
       try {
         const res = await ApiService.getAdminOverview(sec);
-        localStorage.setItem(ADMIN_STORAGE_KEY, sec);
+        sessionStorage.setItem(ADMIN_STORAGE_KEY, sec);
         setAuthenticated(true);
         setStorageBackend(res.storage_backend);
         setPasses(res.passes || []);
@@ -218,6 +217,8 @@ export const AdminDialog: React.FC<AdminDialogProps> = ({
             <TextField
               size="small"
               fullWidth
+              type="password"
+              autoComplete="off"
               label="Mã bảo mật Admin (X-Admin-Secret)"
               value={adminSecret}
               onChange={(e) => setAdminSecret(e.target.value)}
@@ -236,17 +237,23 @@ export const AdminDialog: React.FC<AdminDialogProps> = ({
             >
               Đăng nhập / Làm mới
             </Button>
-            <Button
-              variant="outlined"
-              size="small"
-              onClick={() => {
-                setAdminSecret(DEFAULT_DEV_SECRET);
-                loadOverview(DEFAULT_DEV_SECRET);
-              }}
-              sx={{ whiteSpace: "nowrap", borderColor: "rgba(255,214,10,0.4)", color: "#ffd60a" }}
-            >
-              Điền TK Test
-            </Button>
+            {authenticated && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  sessionStorage.removeItem(ADMIN_STORAGE_KEY);
+                  setAdminSecret("");
+                  setAuthenticated(false);
+                  setPasses([]);
+                  setOrders([]);
+                  setTaxReport(null);
+                }}
+                sx={{ whiteSpace: "nowrap", borderColor: "rgba(255,69,58,0.4)", color: "#ff453a" }}
+              >
+                Đăng xuất
+              </Button>
+            )}
           </Stack>
         </Box>
 
@@ -342,17 +349,19 @@ export const AdminDialog: React.FC<AdminDialogProps> = ({
                     >
                       Reset 3 Link + 1 SRT Dùng Thử (Về Chế Độ Free)
                     </Button>
-                    <Button
-                      variant="contained"
-                      startIcon={<PlayArrowIcon />}
-                      onClick={() => {
-                        onActivateVipCode("VIP-THIEN-2026");
-                        onClose();
-                      }}
-                      sx={{ bgcolor: "#ffd60a", color: "#000", fontWeight: 700 }}
-                    >
-                      Kích hoạt ngay VIP-THIEN-2026 (Agency Pro)
-                    </Button>
+                    {passes.length > 0 && (
+                      <Button
+                        variant="contained"
+                        startIcon={<PlayArrowIcon />}
+                        onClick={() => {
+                          onActivateVipCode(passes[0].code);
+                          onClose();
+                        }}
+                        sx={{ bgcolor: "#ffd60a", color: "#000", fontWeight: 700 }}
+                      >
+                        Kích hoạt nhanh mã VIP ({passes[0].code})
+                      </Button>
+                    )}
                   </Stack>
                 </SpotlightCard>
 
