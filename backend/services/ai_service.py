@@ -183,6 +183,18 @@ def _model_preference() -> str:
     return os.environ.get("LENSAI_MODEL_PREFERENCE", "pro").strip().lower()
 
 
+def _version_tuple(name: str) -> Tuple[int, int, int]:
+    """Trích xuất (major, minor, is_clean_ga) từ tên model kiểu 'gemini-3.6-flash' để sắp xếp chuẩn số học."""
+    low = name.lower()
+    m = re.match(r"^gemini-(\d+)\.(\d+)-(pro|flash)(?:-(lite))?$", low)
+    if m:
+        return (int(m.group(1)), int(m.group(2)), 1)
+    m2 = re.match(r"^gemini-(\d+)\.(\d+)-", low)
+    if m2:
+        return (int(m2.group(1)), int(m2.group(2)), 0)
+    return (0, 0, 0)
+
+
 def _discover_ranked_models(client: genai.Client, preference: Optional[str] = None) -> List[str]:
     """
     Lấy danh sách model khả dụng từ tài khoản Gemini API và sắp xếp ưu tiên.
@@ -198,14 +210,16 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
 
     pro_models: List[str] = []
     flash_models: List[str] = []
+    lite_models: List[str] = []
 
     skip_tokens = (
+        "omni",
         "tts",
         "imagen",
         "image",
         "embedding",
         "aqa",
-        "vision-latest",
+        "vision",
         "1.0",
         "1.5",
         "exp",
@@ -216,28 +230,33 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
         "thinking",
         "live",
         "audio",
-        "lite",
         "robotics",
+        "8b",
     )
 
     try:
         for m in client.models.list():
             name = (getattr(m, "name", "") or "").replace("models/", "")
             low = name.lower()
-            if not low.startswith("gemini"):
+            if not low.startswith("gemini-"):
                 continue
             if any(skip in low for skip in skip_tokens):
                 continue
+            if _version_tuple(low) == (0, 0, 0):
+                continue
             if "pro" in low:
                 pro_models.append(name)
+            elif "flash" in low and "lite" in low:
+                lite_models.append(name)
             elif "flash" in low:
                 flash_models.append(name)
     except Exception as e:
         logger.warning(f"Không thể liệt kê danh sách model từ API: {e}")
 
-    # Sắp xếp giảm dần theo tên phiên bản để bản mới nhất đứng đầu
-    pro_models.sort(reverse=True)
-    flash_models.sort(reverse=True)
+    # Sắp xếp giảm dần theo phiên bản số học (major, minor) để bản mới nhất (VD: 3.6 > 2.5 > 2.0) đứng đầu
+    pro_models.sort(key=_version_tuple, reverse=True)
+    flash_models.sort(key=_version_tuple, reverse=True)
+    lite_models.sort(key=_version_tuple, reverse=True)
 
     ordered: List[str] = []
     # Nếu người dùng chỉ định đích danh một model được hỗ trợ:
@@ -245,9 +264,9 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
         ordered.append(pref)
 
     if pref == "flash" or "flash" in pref:
-        ordered += FALLBACK_FLASH_MODELS + flash_models + PRIORITY_PRO_MODELS + pro_models
+        ordered += flash_models + FALLBACK_FLASH_MODELS + lite_models + pro_models + PRIORITY_PRO_MODELS
     else:
-        ordered += PRIORITY_PRO_MODELS + pro_models + FALLBACK_FLASH_MODELS + flash_models
+        ordered += pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS + lite_models
 
     combined: List[str] = []
     for candidate in ordered:
@@ -258,19 +277,44 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
         if len(_MODELS_CACHE) > 200:  # tránh phình bộ nhớ khi có rất nhiều key khác nhau
             _MODELS_CACHE.clear()
         _MODELS_CACHE[cache_key] = combined
-    logger.info(f"Thứ tự ưu tiên model ({pref}): {combined[:6]}")
+    logger.info(f"Thứ tự ưu tiên model ({pref}): {combined[:8]}")
     return combined
 
 
 def _cooldown_seconds_for(err: Exception) -> int:
-    """404/403 = model không dùng được với key này (lâu dài); 429 = tạm hết quota; còn lại = lỗi thoáng qua."""
+    """404/403 hoặc limit: 0 = model không dùng được với key này (lâu dài); 429 = tạm hết quota."""
     code = getattr(err, "code", None) or getattr(err, "status_code", None)
     msg = str(err).upper()
-    if code in (403, 404) or "404" in msg or "NOT_FOUND" in msg or "403" in msg or "PERMISSION_DENIED" in msg:
-        return 1800
+    if (
+        code in (403, 404)
+        or "404" in msg
+        or "NOT_FOUND" in msg
+        or "403" in msg
+        or "PERMISSION_DENIED" in msg
+        or "LIMIT: 0" in msg
+    ):
+        return 3600
     if code == 429 or "429" in msg or "RESOURCE_EXHAUSTED" in msg or "QUOTA" in msg:
-        return 600
+        return 300
     return 0
+
+
+def format_user_ai_error(err: Exception) -> str:
+    """Ẩn chi tiết RPC nội bộ theo chuẩn bảo mật, chỉ trả về thông báo tiếng Việt rõ ràng cho người dùng."""
+    msg = str(err)
+    up = msg.upper()
+    if "429" in up or "RESOURCE_EXHAUSTED" in up or "QUOTA" in up:
+        return (
+            "Hệ thống AI đang xử lý lượng truy cập cao (chạm giới hạn hạn ngạch tạm thời). "
+            "Lượt dùng / Credit của bạn đã được hoàn trả tự động — vui lòng thử lại sau ít giây."
+        )
+    if "404" in up or "NOT_FOUND" in up:
+        return "Mô hình AI yêu cầu hiện không khả dụng trên khu vực này. Lượt dùng của bạn đã được hoàn trả."
+    if "401" in up or "403" in up or "API_KEY_INVALID" in up or "PERMISSION_DENIED" in up:
+        return "Khóa kết nối AI không hợp lệ hoặc hết quyền truy cập. Lượt dùng của bạn đã được hoàn trả."
+    if "error-refund" in msg or "Mô phỏng lỗi AI" in msg:
+        return msg
+    return "Không thể phân tích video lúc này do gián đoạn kết nối AI. Lượt dùng / Credit của bạn đã được hoàn trả tự động."
 
 
 def _parse_mmss_to_seconds(ts: str) -> int:
@@ -368,7 +412,7 @@ def _generate_with_best_model(
         usable_models = [m for m in ranked_models if _MODEL_COOLDOWN.get((key_id, m), 0) <= now]
     if not usable_models:
         usable_models = ranked_models
-    usable_models = usable_models[:3]
+    usable_models = usable_models[:6]
 
     last_err: Optional[Exception] = None
     for model_name in usable_models:
@@ -390,7 +434,7 @@ def _generate_with_best_model(
             logger.warning(f"Model {model_name} không khả dụng ({err}), tự động chuyển sang model tiếp theo...")
 
     if last_err:
-        raise last_err
+        raise RuntimeError(format_user_ai_error(last_err)) from last_err
     raise RuntimeError("Không tìm thấy model Gemini khả dụng.")
 
 
