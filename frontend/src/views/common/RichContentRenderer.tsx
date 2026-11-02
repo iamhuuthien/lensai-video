@@ -179,15 +179,48 @@ interface RichInlineTextProps {
 export const RichInlineText: React.FC<RichInlineTextProps> = ({ text, onSeek }) => {
   if (!text) return null;
 
-  // Normalize stray unclosed double-asterisks or backticks
-  const normalized = text.replace(/`(\[?\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?\]?)`/g, "$1");
+  // Normalize stray unclosed double-asterisks, backticks, or *"quoted"*
+  let bodyText = text
+    .replace(/`(\[?\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?\]?)`/g, "$1")
+    .replace(/\*"([^"]+)"\*/g, '"$1"')
+    .replace(/\*“([^”]+)”\*/g, '“$1”');
 
-  // Tokenize by **bold**, *italic*, `code`, or timecodes like [00:00 - 00:06] / 00:06 - 00:14
-  const tokenRegex = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|\b\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?\b)/g;
-  const parts = normalized.split(tokenRegex);
+  // Detect leading label before ':' (e.g. "Điểm yếu cần sửa ngay: ..." or "Phương án Hook 1 (...): ...")
+  let leadingLabel: { label: string; color: string } | null = null;
+  const labelMatch = bodyText.match(/^(\*{0,2}[A-ZÀ-Ỹ0-9][^:]{2,52}?):(\*{0,2})\s+(.*)$/);
+  if (labelMatch && !/^\d{1,2}:\d{2}/.test(bodyText)) {
+    const cleanLbl = stripInlineMarkdown(labelMatch[1]);
+    const lowLbl = cleanLbl.toLowerCase();
+    let lblColor = APPLE_PALETTE.skyLink;
+    if (lowLbl.includes("yếu") || lowLbl.includes("lỗi") || lowLbl.includes("vấn đề")) {
+      lblColor = "#ff6961";
+    } else if (lowLbl.includes("mạnh") || lowLbl.includes("ưu điểm") || lowLbl.includes("giải pháp")) {
+      lblColor = APPLE_PALETTE.success;
+    } else if (lowLbl.includes("hook") || lowLbl.includes("phương án") || lowLbl.includes("option")) {
+      lblColor = "#ffd60a";
+    }
+    leadingLabel = { label: `${cleanLbl}:`, color: lblColor };
+    bodyText = labelMatch[3];
+  }
+
+  // Tokenize by **bold**, *italic*, `code`, "quotes", or timecodes like [00:00 - 00:06] / 00:06 - 00:14
+  const tokenRegex = /(\*\*[^*]+\*\*|\*[^*\n]+\*|`[^`]+`|"[^"\n]{3,140}"|“[^”\n]{3,140}”|\b\d{1,2}:\d{2}(?:\s*-\s*\d{1,2}:\d{2})?\b)/g;
+  const parts = bodyText.split(tokenRegex);
 
   return (
     <>
+      {leadingLabel && (
+        <Box
+          component="span"
+          sx={{
+            fontWeight: 800,
+            color: leadingLabel.color,
+            mr: 0.75,
+          }}
+        >
+          {leadingLabel.label}
+        </Box>
+      )}
       {parts.map((part, idx) => {
         if (!part) return null;
 
@@ -227,6 +260,31 @@ export const RichInlineText: React.FC<RichInlineTextProps> = ({ text, onSeek }) 
               sx={{
                 fontWeight: 700,
                 color: "#ffffff",
+                bgcolor: "rgba(41, 151, 255, 0.12)",
+                px: 0.5,
+                py: 0.1,
+                borderRadius: "4px",
+              }}
+            >
+              {inner}
+            </Box>
+          );
+        }
+
+        // Quoted text "..." or “...”
+        if (
+          ((part.startsWith('"') && part.endsWith('"')) || (part.startsWith("“") && part.endsWith("”"))) &&
+          part.length > 4
+        ) {
+          const inner = stripInlineMarkdown(part);
+          return (
+            <Box
+              key={idx}
+              component="span"
+              sx={{
+                fontWeight: 600,
+                fontStyle: "italic",
+                color: "#64d2ff",
               }}
             >
               {inner}
@@ -242,8 +300,9 @@ export const RichInlineText: React.FC<RichInlineTextProps> = ({ text, onSeek }) 
               key={idx}
               component="span"
               sx={{
-                color: "#c8e1ff",
+                color: "#ffd60a",
                 fontStyle: "italic",
+                fontWeight: 500,
               }}
             >
               {inner}
@@ -303,7 +362,7 @@ export const RichInlineText: React.FC<RichInlineTextProps> = ({ text, onSeek }) 
           );
         }
 
-        return <React.Fragment key={idx}>{part.replace(/\*\*/g, "").replace(/`/g, "")}</React.Fragment>;
+        return <React.Fragment key={idx}>{part.replace(/\*\*/g, "").replace(/\*/g, "").replace(/`/g, "")}</React.Fragment>;
       })}
     </>
   );
