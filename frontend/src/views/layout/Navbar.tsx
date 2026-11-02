@@ -19,6 +19,7 @@ import DiamondIcon from "@mui/icons-material/Diamond";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import AppleIcon from "@mui/icons-material/Apple";
 import TuneIcon from "@mui/icons-material/Tune";
+import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import type { TrialStatus } from "../../models/types";
 import { APPLE_PALETTE } from "../../theme/theme";
@@ -31,6 +32,7 @@ interface NavbarProps {
   onOpenPricing: () => void;
   onOpenSettings: () => void;
   onOpenShortcut: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -41,6 +43,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenPricing,
   onOpenSettings,
   onOpenShortcut,
+  onOpenAdmin,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -183,6 +186,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <AppleIcon sx={{ fontSize: 18 }} />
           </IconButton>
+
+          {/* Admin & QA Portal */}
+          {onOpenAdmin && (
+            <IconButton
+              size="small"
+              onClick={onOpenAdmin}
+              title="Admin & QA Test Center"
+              sx={{
+                color: "#ffd60a",
+                border: "1px solid rgba(255, 214, 10, 0.35)",
+                "&:hover": { bgcolor: "rgba(255, 214, 10, 0.12)", borderColor: "#ffd60a" },
+              }}
+            >
+              <AdminPanelSettingsIcon sx={{ fontSize: 18 }} />
+            </IconButton>
+          )}
 
           {/* Settings */}
           <IconButton

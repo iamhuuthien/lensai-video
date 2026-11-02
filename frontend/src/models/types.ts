@@ -87,6 +87,8 @@ export interface Order {
   account_name: string;
   memo: string;
   status: "pending" | "paid" | "expired";
+  /** VIP code issued for this order; only present once the order is paid. */
+  pass_code?: string;
 }
 
 export interface SystemFeatures {

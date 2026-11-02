@@ -130,9 +130,12 @@ export function useBillingController() {
           const check = await ApiService.checkOrder(orderCode);
           if (check.status === "paid") {
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+            // The credit-bearing identity is the issued VIP code, NOT the order code.
+            const issued = check.pass_code || "";
+            if (!issued) return;
             setIsVip(true);
-            StorageService.setVipCode(orderCode);
-            setVipCode(orderCode);
+            StorageService.setVipCode(issued);
+            setVipCode(issued);
             setQrModalOpen(false);
             setStatusMessage("Thanh toán thành công! Gói VIP đã được kích hoạt tự động.");
             refreshTrialStatus();
@@ -151,9 +154,15 @@ export function useBillingController() {
       const check = await ApiService.checkOrder(currentOrder.order_code);
       if (check.status === "paid") {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        const issued = check.pass_code || "";
+        if (!issued) {
+          setStatusMessage("Đã nhận thanh toán, đang cấp mã VIP. Vui lòng thử lại sau vài giây.");
+          return;
+        }
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         setIsVip(true);
-        StorageService.setVipCode(currentOrder.order_code);
-        setVipCode(currentOrder.order_code);
+        StorageService.setVipCode(issued);
+        setVipCode(issued);
         setQrModalOpen(false);
         setStatusMessage("Thanh toán thành công! Gói VIP đã được kích hoạt.");
         refreshTrialStatus();

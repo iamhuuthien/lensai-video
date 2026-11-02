@@ -15,6 +15,7 @@ import { SettingsDialog } from "../views/dialogs/SettingsDialog";
 import { ShortcutDialog } from "../views/dialogs/ShortcutDialog";
 import { PricingDialog } from "../views/dialogs/PricingDialog";
 import { VietQrModal } from "../views/dialogs/VietQrModal";
+import { AdminDialog } from "../views/dialogs/AdminDialog";
 import { useAnalyzeController } from "../controllers/useAnalyzeController";
 import { useChatController } from "../controllers/useChatController";
 import { useBillingController } from "../controllers/useBillingController";
@@ -25,6 +26,7 @@ export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<number>(0);
   const [settingsOpen, setSettingsOpen] = useState<boolean>(false);
   const [shortcutOpen, setShortcutOpen] = useState<boolean>(false);
+  const [adminOpen, setAdminOpen] = useState<boolean>(false);
   const [downloadLoading, setDownloadLoading] = useState<boolean>(false);
   const [cleanDownloadSuccess, setCleanDownloadSuccess] = useState<string | null>(null);
 
@@ -37,7 +39,8 @@ export const App: React.FC = () => {
     try {
       const res = await ApiService.exportCapcutSrt(
         analyze.result.video_info.title,
-        analyze.result.raw_markdown || analyze.result.summary
+        analyze.result.raw_markdown || analyze.result.summary,
+        analyze.result.session_id
       );
       ExportService.downloadFile(res.filename, res.content, "application/x-subrip");
       billing.refreshTrialStatus();
@@ -100,6 +103,7 @@ export const App: React.FC = () => {
           onOpenPricing={() => billing.setPricingOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenShortcut={() => setShortcutOpen(true)}
+          onOpenAdmin={() => setAdminOpen(true)}
         />
 
         {/* Main Content */}
@@ -209,6 +213,13 @@ export const App: React.FC = () => {
           order={billing.currentOrder}
           onClose={billing.closeQrModal}
           onManualCheck={billing.handleManualCheckOrder}
+        />
+
+        <AdminDialog
+          open={adminOpen}
+          onClose={() => setAdminOpen(false)}
+          onActivateVipCode={billing.handleApplyVipCode}
+          onRefreshTrial={billing.refreshTrialStatus}
         />
 
         {/* Status Toast */}

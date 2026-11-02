@@ -73,6 +73,32 @@ Ví dụ:
 """
 
 MODE_PROMPTS: Dict[str, str] = {
+    "quick": KEY_SEGMENT_INSTRUCTION + """
+Hãy tóm tắt thật nhanh, súc tích và đi thẳng vào trọng tâm video bằng tiếng Việt:
+### 1. Đoạn hướng dẫn trọng tâm & Thông điệp cốt lõi
+- Chỉ rõ mốc `[MM:SS - MM:SS]` quan trọng nhất và tóm tắt trong 3 câu ngắn gọn.
+### 2. Các mốc thời gian chính
+- `[00:00]` Mở đầu & Hook thu hút
+- `[00:05]` Nội dung chính được trình bày
+- `[00:20]` Kết luận & Gợi ý áp dụng""",
+
+    "deep": KEY_SEGMENT_INSTRUCTION + """
+Hãy phân tích chuyên sâu cả hình ảnh (OCR chữ trên màn hình, chuyển cảnh) lẫn âm thanh bằng tiếng Việt:
+### 1. Đoạn vàng giữ chân & Cấu trúc Hook
+### 2. Phân tích chi tiết từng phân cảnh (`[MM:SS]`)
+### 3. Đánh giá chuyên môn & Mở rộng kiến thức thực chiến""",
+
+    "study": KEY_SEGMENT_INSTRUCTION + """
+Hãy chuyển hóa video này thành tài liệu học tập & ghi chép có hệ thống bằng tiếng Việt:
+### 1. Kiến thức cốt lõi & Thuật ngữ quan trọng
+### 2. Ghi chép chi tiết theo dòng thời gian (`[MM:SS]`)
+### 3. Bài tập thực hành & Checklist áp dụng ngay""",
+
+    "clip_ideas": KEY_SEGMENT_INSTRUCTION + """
+Hãy đóng vai Đạo diễn Nội dung Viral để bóc tách công thức dựng clip từ video này:
+### 1. Công thức Hook 3 giây đầu & Nhịp cắt cảnh (`[MM:SS]`)
+### 2. Kịch bản Remix / Làm lại tốt hơn cho kênh của bạn
+### 3. Gợi ý 3 tiêu đề & góc tiếp cận mới dễ lên xu hướng""",
     "explain": KEY_SEGMENT_INSTRUCTION + """
 Hãy xem kỹ cả HÌNH ẢNH (hành động, thao tác trên màn hình, chữ chèn trên video) lẫn ÂM THANH (lời thoại) và phân tích chuyên sâu bằng tiếng Việt theo cấu trúc:
 
@@ -341,6 +367,100 @@ def _generate_with_best_model(
     raise RuntimeError("Không tìm thấy model Gemini khả dụng.")
 
 
+
+def _is_demo_key(api_key: Optional[str]) -> bool:
+    key = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
+    return key == "LENSAI_DEMO_MASTER_KEY" or os.environ.get("LENSAI_DEMO_MODE") == "1"
+
+
+def _build_demo_analysis(video_info: Dict[str, Any], mode: str, model_pref: Optional[str]) -> Tuple[str, str]:
+    url = str(video_info.get("url") or "")
+    if "error-refund" in url:
+        raise RuntimeError("Mô phỏng lỗi AI để kiểm tra cơ chế tự động hoàn trả Credit / Lượt dùng thử.")
+    title = video_info.get("title") or "Video Ngắn Viral"
+    platform = video_info.get("platform") or "TikTok"
+    model_used = "gemini-2.5-pro" if model_pref == "pro" else "gemini-2.5-flash"
+    lines = [
+        f"[KEY_SEGMENT: 00:03 - 00:26 | Trình bày trực tiếp 3 bước thực chiến cốt lõi của {title}]",
+        "",
+        "### 1. Đoạn hướng dẫn trọng tâm & Tóm tắt cốt lõi",
+        f"Video trên nền tảng **{platform}** đi thẳng vào vấn đề ngay từ giây thứ 3 (bỏ qua phần giới thiệu rườm rà), tập trung giải quyết chủ đề: **{title}**. Tác giả kết hợp hiệu ứng chữ nổi (OCR) cùng nhịp cắt nhanh mỗi 2.5 giây để giữ chân khán giả.",
+        "",
+        "### 2. Dòng thời gian & Diễn biến chi tiết",
+        "- [00:00] Mở đầu bằng câu hỏi đánh trúng tâm lý tò mò của người xem (Visual Hook + Text Banner).",
+        "- [00:03] Đi vào hướng dẫn bước 1: Thiết lập công cụ và chuẩn bị dữ liệu đầu vào chuẩn xác.",
+        "- [00:14] Bước 2: Thao tác trực tiếp trên màn hình kèm chú thích OCR rõ ràng từng thông số.",
+        "- [00:26] Bước 3: Kiểm tra kết quả thực tế, so sánh trước/sau và chốt lời kêu gọi hành động (CTA).",
+        "",
+        "### 3. Điểm đắt giá & Takeaways",
+        "- Cắt bỏ hoàn toàn khoảng lặng âm thanh giữa các câu thoại để duy trì tốc độ 155–165 WPM.",
+        "- Đặt kết quả ấn tượng nhất lên đầu video (Pattern Interrupt) trước khi giải thích quy trình.",
+        "- Sử dụng phụ đề động đồng bộ khung hình giúp tăng 42% tỷ lệ xem hết video khi tắt tiếng.",
+        "",
+        f"### 4. Hành động khuyến nghị & Mở rộng chuyên sâu (Chế độ: {mode})",
+        "- Lưu lại kịch bản phân cảnh và xuất ngay file phụ đề .SRT chuẩn nhịp CapCut từ thanh công cụ.",
+        "- Áp dụng cấu trúc 3 bước (Hook 3s -> Giải pháp 20s -> CTA 5s) cho video tiếp theo trên kênh của bạn.",
+        "- Kết hợp kiểm tra nhịp độ đọc trong tab Studio CapCut để tối ưu thời lượng dưới 45 giây.",
+    ]
+    return "\n".join(lines), model_used
+
+
+def _build_demo_chat_or_srt(question: str, model_pref: Optional[str]) -> Tuple[str, str]:
+    q = (question or "").strip()
+    model_used = "gemini-2.5-pro" if model_pref == "pro" else "gemini-2.5-flash"
+    if "===SRT_START===" in q:
+        lines = [
+            "### Đánh giá & Gợi ý Dựng Clip CapCut",
+            "- **Hook 3 giây đầu (9/10):** Nhịp vào đề nhanh, rõ thông điệp.",
+            "- **Nhịp cắt (Pacing):** Giữ trung bình 2.5s/câu, chèn thêm B-roll ở giây 00:08.",
+            "",
+            "===SRT_START===",
+            "1",
+            "00:00:00,000 --> 00:00:03,000",
+            "Bí quyết tạo video viral triệu view cùng LensAI Studio!",
+            "",
+            "2",
+            "00:00:03,000 --> 00:00:07,200",
+            "Tự động nhận diện giọng nói và ngắt nhịp chuẩn CapCut.",
+            "",
+            "3",
+            "00:00:07,200 --> 00:00:12,000",
+            "Áp dụng ngay cho kênh TikTok, Reels và Shorts của bạn!",
+            "===SRT_END===",
+        ]
+        return "\n".join(lines), model_used
+    if "SRT" in q.upper() or "-->" in q or "CAPCUT" in q.upper():
+        lines = [
+            "1",
+            "00:00:00,000 --> 00:00:03,200",
+            "90% người xem lướt qua video chỉ vì 3 giây đầu!",
+            "",
+            "2",
+            "00:00:03,200 --> 00:00:07,500",
+            "Đây là 3 bước tối ưu kịch bản và phụ đề tự động bằng AI.",
+            "",
+            "3",
+            "00:00:07,500 --> 00:00:12,800",
+            "Bước 1: Dán link video để AI bóc tách đoạn giữ chân cao nhất.",
+            "",
+            "4",
+            "00:00:12,800 --> 00:00:18,400",
+            "Bước 2: Trích xuất chữ trên màn hình OCR và kịch bản chi tiết.",
+            "",
+            "5",
+            "00:00:18,400 --> 00:00:24,000",
+            "Bước 3: Xuất file .SRT khớp khung giờ đưa thẳng vào CapCut!",
+        ]
+        return "\n".join(lines), model_used
+    lines = [
+        f"**Phân tích chuyên sâu cho câu hỏi:** *{q}*",
+        "",
+        "1. **Tại mốc `[00:03 - 00:14]`:** Tác giả tập trung giải quyết trực tiếp vấn đề bằng thao tác trực quan trên màn hình.",
+        "2. **Mẹo áp dụng nhanh:** Bạn có thể sao chép cấu trúc câu mở đầu này và kết hợp xuất file `.SRT` trong mục Studio CapCut để rút ngắn 80% thời gian dựng clip.",
+    ]
+    return "\n".join(lines), model_used
+
+
 def analyze_video_with_ai(
     video_info: Dict[str, Any],
     mode: str = "explain",
@@ -353,12 +473,33 @@ def analyze_video_with_ai(
     xác định đoạn thời gian hướng dẫn trọng tâm khớp với tiêu đề nhất,
     và tự động mở rộng kiến thức chuyên sâu về chủ đề đó.
     """
-    client = get_genai_client(api_key)
     video_path = video_info["video_path"]
     session_id = video_info["session_id"]
-
-    video_part = _create_video_part(client, video_path)
     metadata_text = _build_metadata_context(video_info)
+
+    if _is_demo_key(api_key):
+        raw_explanation, model_used = _build_demo_analysis(video_info, mode, model)
+        key_segment, cleaned_explanation = extract_key_segment(raw_explanation)
+        SESSIONS[session_id] = {
+            "video_info": video_info,
+            "metadata_text": metadata_text,
+            "model_used": model_used,
+            "key_segment": key_segment,
+            "explanation": cleaned_explanation,
+            "history": [
+                {"role": "user", "text": custom_prompt or f"Phân tích chuyên sâu & mở rộng ({mode})"},
+                {"role": "assistant", "text": cleaned_explanation},
+            ],
+            "created_at": time.time(),
+        }
+        return {
+            "explanation": cleaned_explanation,
+            "key_segment": key_segment,
+            "model_used": model_used,
+        }
+
+    client = get_genai_client(api_key)
+    video_part = _create_video_part(client, video_path)
 
     base_instruction = MODE_PROMPTS.get(mode, MODE_PROMPTS["explain"])
     if custom_prompt and custom_prompt.strip():
@@ -483,6 +624,12 @@ def chat_about_video(
 
     if not session:
         raise KeyError("Phiên làm việc không tồn tại. Vui lòng bấm phân tích lại video.")
+
+    if _is_demo_key(api_key):
+        answer, model_used = _build_demo_chat_or_srt(question, model)
+        session["history"].append({"role": "user", "text": question.strip()})
+        session["history"].append({"role": "assistant", "text": answer})
+        return {"answer": answer, "model_used": model_used}
 
     client = get_genai_client(api_key)
     video_info = session["video_info"]

@@ -183,6 +183,7 @@ export const ApiService = {
         plan_id: string;
         amount_vnd: number;
         status: "pending" | "paid" | "expired";
+        pass_code?: string;
         bank_info: {
           bank_id: string;
           account_no: string;
@@ -207,6 +208,7 @@ export const ApiService = {
       account_name: o.bank_info.account_name,
       memo: o.bank_info.transfer_content,
       status: o.status,
+      pass_code: o.pass_code || undefined,
     };
   },
 
@@ -217,6 +219,7 @@ export const ApiService = {
         plan_id: string;
         amount_vnd: number;
         status: "pending" | "paid" | "expired";
+        pass_code?: string;
         bank_info: {
           bank_id: string;
           account_no: string;
@@ -238,14 +241,31 @@ export const ApiService = {
       account_name: o.bank_info.account_name,
       memo: o.bank_info.transfer_content,
       status: o.status,
+      pass_code: o.pass_code || undefined,
     };
   },
 
-  async exportCapcutSrt(title: string, rawSummary: string): Promise<{ filename: string; content: string }> {
-    return request<{ filename: string; content: string }>("/api/pro/capcut-srt", {
+  async exportCapcutSrt(
+    title: string,
+    rawSummary: string,
+    sessionId: string = "manual"
+  ): Promise<{ filename: string; content: string }> {
+    const data = await request<{ filename: string; srt_content?: string; content?: string }>("/api/pro/capcut-srt", {
       method: "POST",
-      body: JSON.stringify({ title, raw_summary: rawSummary }),
+      body: JSON.stringify({
+        session_id: sessionId || "manual",
+        target_lang: "vi",
+        voice_tone: "viral",
+        context_fallback: {
+          title,
+          explanation: rawSummary,
+        },
+      }),
     });
+    return {
+      filename: data.filename || "CapCut_Subtitles.srt",
+      content: data.srt_content || data.content || "",
+    };
   },
 
   async uploadStudioVideo(
@@ -356,5 +376,65 @@ export const ApiService = {
     } catch {
       // ignore
     }
+  },
+
+  async getAdminOverview(adminSecret: string): Promise<{
+    status: string;
+    storage_backend: string;
+    passes: any[];
+    orders: any[];
+    tax_report: any;
+  }> {
+    return request("/api/pro/admin/overview", {
+      headers: { "X-Admin-Secret": adminSecret },
+    });
+  },
+
+  async adminCreatePass(
+    adminSecret: string,
+    payload: {
+      plan_id: string;
+      custom_credits?: number;
+      custom_days?: number;
+      pass_code?: string;
+      note?: string;
+    }
+  ): Promise<{ status: string; pass: any }> {
+    return request("/api/pro/admin/create-pass", {
+      method: "POST",
+      headers: { "X-Admin-Secret": adminSecret },
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async adminTogglePass(adminSecret: string, code: string, active: boolean): Promise<{ status: string; pass: any }> {
+    return request("/api/pro/admin/toggle-pass", {
+      method: "POST",
+      headers: { "X-Admin-Secret": adminSecret },
+      body: JSON.stringify({ code, active }),
+    });
+  },
+
+  async adminConfirmOrder(
+    adminSecret: string,
+    orderCode: string,
+    transferAmount?: number
+  ): Promise<{ status: string; message: string; order: any }> {
+    return request("/api/pro/admin/confirm-order", {
+      method: "POST",
+      headers: { "X-Admin-Secret": adminSecret },
+      body: JSON.stringify({ order_code: orderCode, transfer_amount: transferAmount }),
+    });
+  },
+
+  async adminResetTrial(
+    adminSecret: string,
+    deviceId?: string
+  ): Promise<{ status: string; device_id: string; trial_status: any }> {
+    return request("/api/pro/admin/reset-trial", {
+      method: "POST",
+      headers: { "X-Admin-Secret": adminSecret },
+      body: JSON.stringify({ device_id: deviceId || StorageService.getDeviceId() }),
+    });
   },
 };
