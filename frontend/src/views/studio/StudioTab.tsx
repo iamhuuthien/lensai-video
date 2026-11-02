@@ -340,7 +340,7 @@ export const StudioTab: React.FC = () => {
                 Import Video Gốc
               </Typography>
               <Typography variant="caption" sx={{ color: APPLE_PALETTE.inkMuted, display: "block", mb: 2 }}>
-                Hỗ trợ định dạng: MP4, MOV, WEBM, MKV (Dung lượng tối đa: 60MB).
+                Hỗ trợ: MP4, MOV, WEBM, MKV (Tối đa: 60MB · Thời lượng tối ưu: 15 giây – 12 phút, tối đa ~15 phút).
               </Typography>
 
               <input
