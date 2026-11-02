@@ -50,14 +50,12 @@ SUPPORTED_MODELS: Dict[str, Dict[str, str]] = {
 # Dòng PRO: Chuyên sâu, phân tích chi tiết hình ảnh & chữ, tư duy đa tầng (cho VIP)
 PRIORITY_PRO_MODELS: List[str] = [
     "gemini-2.5-pro",
-    "gemini-1.5-pro",
 ]
 
 # Dòng FLASH: Tốc độ cao, tối ưu chi phí & hạn ngạch (cho người dùng Dùng thử / Free)
 FALLBACK_FLASH_MODELS: List[str] = [
     "gemini-2.5-flash",
     "gemini-2.0-flash",
-    "gemini-1.5-flash",
 ]
 
 # Cache danh sách model theo từng API key, và thời điểm model được dùng lại sau khi bị lỗi.
@@ -160,7 +158,14 @@ def get_genai_client(api_key: Optional[str] = None) -> genai.Client:
             "Chưa có GEMINI_API_KEY. Vui lòng nhập Gemini API Key trong phần Cài đặt (⚙️ API Key) "
             "hoặc thiết lập biến môi trường GEMINI_API_KEY."
         )
-    client = genai.Client(api_key=key)
+    try:
+        http_opts = types.HttpOptions(
+            timeout=45000,
+            retry_options=types.HttpRetryOptions(attempts=1),
+        )
+        client = genai.Client(api_key=key, http_options=http_opts)
+    except Exception:
+        client = genai.Client(api_key=key)
     # Định danh không đảo ngược được của key, dùng để cache danh sách model theo từng key.
     try:
         client._lensai_key_id = hashlib.sha256(key.encode("utf-8")).hexdigest()[:12]
@@ -194,18 +199,38 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
     pro_models: List[str] = []
     flash_models: List[str] = []
 
+    skip_tokens = (
+        "tts",
+        "imagen",
+        "image",
+        "embedding",
+        "aqa",
+        "vision-latest",
+        "1.0",
+        "1.5",
+        "exp",
+        "preview",
+        "customtools",
+        "computer-use",
+        "deep-research",
+        "thinking",
+        "live",
+        "audio",
+        "lite",
+        "robotics",
+    )
+
     try:
         for m in client.models.list():
             name = (getattr(m, "name", "") or "").replace("models/", "")
             low = name.lower()
             if not low.startswith("gemini"):
                 continue
-            # Chỉ loại bỏ các model chuyên dụng không phải multimodal chat
-            if any(skip in low for skip in ["tts", "imagen", "embedding", "aqa", "vision-latest", "1.0"]):
+            if any(skip in low for skip in skip_tokens):
                 continue
             if "pro" in low:
                 pro_models.append(name)
-            elif "flash" in low and "lite" not in low:
+            elif "flash" in low:
                 flash_models.append(name)
     except Exception as e:
         logger.warning(f"Không thể liệt kê danh sách model từ API: {e}")
@@ -220,9 +245,9 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
         ordered.append(pref)
 
     if pref == "flash" or "flash" in pref:
-        ordered += flash_models + FALLBACK_FLASH_MODELS + pro_models + PRIORITY_PRO_MODELS
+        ordered += FALLBACK_FLASH_MODELS + flash_models + PRIORITY_PRO_MODELS + pro_models
     else:
-        ordered += pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS
+        ordered += PRIORITY_PRO_MODELS + pro_models + FALLBACK_FLASH_MODELS + flash_models
 
     combined: List[str] = []
     for candidate in ordered:
@@ -239,11 +264,12 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
 
 def _cooldown_seconds_for(err: Exception) -> int:
     """404/403 = model không dùng được với key này (lâu dài); 429 = tạm hết quota; còn lại = lỗi thoáng qua."""
-    code = getattr(err, "code", None)
-    if code in (403, 404):
+    code = getattr(err, "code", None) or getattr(err, "status_code", None)
+    msg = str(err).upper()
+    if code in (403, 404) or "404" in msg or "NOT_FOUND" in msg or "403" in msg or "PERMISSION_DENIED" in msg:
         return 1800
-    if code == 429:
-        return 120
+    if code == 429 or "429" in msg or "RESOURCE_EXHAUSTED" in msg or "QUOTA" in msg:
+        return 600
     return 0
 
 
@@ -342,6 +368,7 @@ def _generate_with_best_model(
         usable_models = [m for m in ranked_models if _MODEL_COOLDOWN.get((key_id, m), 0) <= now]
     if not usable_models:
         usable_models = ranked_models
+    usable_models = usable_models[:3]
 
     last_err: Optional[Exception] = None
     for model_name in usable_models:
