@@ -2,6 +2,11 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { FreeToolsService, VIRAL_HOOKS } from "../services/freeTools";
 import { ExportService } from "../services/export";
 import { StorageService } from "../services/storage";
+import {
+  parseSrtBlocks,
+  stripInlineMarkdown,
+  stripMarkdownToCleanText,
+} from "../views/common/RichContentRenderer";
 
 describe("StorageService Legacy Migration", () => {
   beforeEach(() => {
@@ -64,5 +69,29 @@ describe("ExportService", () => {
   it("formats seconds into mm:ss duration", () => {
     expect(ExportService.formatDuration(65)).toBe("1:05");
     expect(ExportService.formatDuration(180)).toBe("3:00");
+  });
+});
+
+describe("RichContentRenderer Utilities", () => {
+  it("strips raw markdown symbols (**bold**, `code`, | tables |) cleanly for users", () => {
+    const raw =
+      "### 1. Đánh giá Hook\n| **[00:06 - 00:14]** | Tạo tài khoản AWS | **Zoom Out** |\n> *\"Câu mở đầu viral\"*";
+    const cleaned = stripMarkdownToCleanText(raw);
+    expect(cleaned).not.toContain("**");
+    expect(cleaned).not.toContain("|");
+    expect(cleaned).not.toContain("###");
+    expect(cleaned).toContain("Tạo tài khoản AWS");
+    expect(cleaned).toContain("Zoom Out");
+    expect(stripInlineMarkdown("**[00:06 - 00:14]** `100% FREE`")).toBe("[00:06 - 00:14] 100% FREE");
+  });
+
+  it("parses .SRT content into structured timeline blocks with word counts and seconds", () => {
+    const srt = "1\n00:00:00,100 --> 00:00:02,200\nDự án cá nhân về Cloud\n\n2\n00:00:02,200 --> 00:00:05,500\nsẽ giúp bạn đi trước.";
+    const blocks = parseSrtBlocks(srt);
+    expect(blocks.length).toBe(2);
+    expect(blocks[0].index).toBe(1);
+    expect(blocks[0].text).toBe("Dự án cá nhân về Cloud");
+    expect(blocks[0].wordCount).toBe(6);
+    expect(blocks[1].startSeconds).toBeCloseTo(2.2, 1);
   });
 });

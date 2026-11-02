@@ -18,6 +18,7 @@ import PersonIcon from "@mui/icons-material/Person";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import type { ChatMessage } from "../../models/types";
 import { APPLE_PALETTE } from "../../theme/theme";
+import { RichContentRenderer } from "../common/RichContentRenderer";
 
 interface ChatSectionProps {
   messages: ChatMessage[];
@@ -178,9 +179,13 @@ export const ChatSection: React.FC<ChatSectionProps> = ({
                     border: `1px solid ${isUser ? "transparent" : APPLE_PALETTE.hairline}`,
                   }}
                 >
-                  <Typography variant="body2" sx={{ lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
-                    {msg.text}
-                  </Typography>
+                  {isUser ? (
+                    <Typography variant="body2" sx={{ lineHeight: 1.5, whiteSpace: "pre-wrap" }}>
+                      {msg.text}
+                    </Typography>
+                  ) : (
+                    <RichContentRenderer content={msg.text} compact />
+                  )}
                 </Paper>
               </Box>
             );

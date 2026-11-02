@@ -25,6 +25,7 @@ import type { AnalysisResult } from "../../models/types";
 import { ExportService } from "../../services/export";
 import { APPLE_PALETTE } from "../../theme/theme";
 import { SpotlightCard } from "../common/SpotlightCard";
+import { RichInlineText, stripInlineMarkdown, stripMarkdownToCleanText } from "../common/RichContentRenderer";
 
 interface ResultBentoProps {
   result: AnalysisResult;
@@ -36,7 +37,8 @@ export const ResultBento: React.FC<ResultBentoProps> = ({ result, onSeek, onExpo
   const [copied, setCopied] = useState<boolean>(false);
 
   const handleCopyAll = async () => {
-    const success = await ExportService.copyToClipboard(result.raw_markdown || result.summary);
+    const cleanText = stripMarkdownToCleanText(result.raw_markdown || result.summary);
+    const success = await ExportService.copyToClipboard(cleanText);
     if (success) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -157,11 +159,11 @@ export const ResultBento: React.FC<ResultBentoProps> = ({ result, onSeek, onExpo
               variant="body1"
               sx={{
                 color: "#e1e1e6",
-                lineHeight: 1.6,
+                lineHeight: 1.65,
                 whiteSpace: "pre-line",
               }}
             >
-              {result.summary}
+              <RichInlineText text={result.summary} onSeek={onSeek} />
             </Typography>
           </SpotlightCard>
         </Grid>
@@ -220,8 +222,8 @@ export const ResultBento: React.FC<ResultBentoProps> = ({ result, onSeek, onExpo
                       }}
                     />
                     <ListItemText
-                      primary={<Typography variant="body2" sx={{ fontWeight: 500, color: "#ffffff" }}>{chap.title}</Typography>}
-                      secondary={chap.summary ? <Typography variant="caption" sx={{ color: APPLE_PALETTE.inkMuted }}>{chap.summary}</Typography> : undefined}
+                      primary={<Typography variant="body2" sx={{ fontWeight: 500, color: "#ffffff" }}>{stripInlineMarkdown(chap.title)}</Typography>}
+                      secondary={chap.summary ? <Typography variant="caption" sx={{ color: APPLE_PALETTE.inkMuted }}>{stripInlineMarkdown(chap.summary)}</Typography> : undefined}
                     />
                   </ListItem>
                 ))}
@@ -267,7 +269,7 @@ export const ResultBento: React.FC<ResultBentoProps> = ({ result, onSeek, onExpo
                       <Box sx={{ width: 6, height: 6, borderRadius: "50%", bgcolor: "#ffd60a" }} />
                     </ListItemIcon>
                     <ListItemText
-                      primary={<Typography variant="body2" sx={{ color: "#e1e1e6", lineHeight: 1.5 }}>{item}</Typography>}
+                      primary={<Typography variant="body2" sx={{ color: "#e1e1e6", lineHeight: 1.5 }}><RichInlineText text={item} onSeek={onSeek} /></Typography>}
                     />
                   </ListItem>
                 ))}
@@ -309,7 +311,7 @@ export const ResultBento: React.FC<ResultBentoProps> = ({ result, onSeek, onExpo
                       <CheckCircleOutlinedIcon sx={{ fontSize: 16, color: APPLE_PALETTE.success }} />
                     </ListItemIcon>
                     <ListItemText
-                      primary={<Typography variant="body2" sx={{ color: "#e1e1e6", lineHeight: 1.5 }}>{item}</Typography>}
+                      primary={<Typography variant="body2" sx={{ color: "#e1e1e6", lineHeight: 1.5 }}><RichInlineText text={item} onSeek={onSeek} /></Typography>}
                     />
                   </ListItem>
                 ))}
