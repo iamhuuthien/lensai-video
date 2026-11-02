@@ -8,3 +8,18 @@ services:
         sync: false
       - key: PORT
         value: 8000
+      # --- Pro extension (set in the Render dashboard, never commit values) ---
+      - key: LENSAI_PRO_GIT_URL
+        sync: false
+      - key: FIREBASE_CREDENTIALS_JSON   # minified service-account JSON; required on Render (no silent local fallback)
+        sync: false
+      - key: SEPAY_WEBHOOK_API_KEY       # webhook fails closed (503) when missing
+        sync: false
+      - key: LENSAI_ADMIN_SECRET
+        sync: false
+      - key: VIETQR_BANK_ID
+        sync: false
+      - key: VIETQR_ACCOUNT_NO
+        sync: false
+      - key: VIETQR_ACCOUNT_NAME
+        sync: false
