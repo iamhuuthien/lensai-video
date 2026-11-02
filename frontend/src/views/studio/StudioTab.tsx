@@ -18,6 +18,7 @@ import {
   LinearProgress,
   Paper,
   IconButton,
+  Snackbar,
 } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import SubtitlesIcon from "@mui/icons-material/Subtitles";
@@ -55,7 +56,11 @@ export const StudioTab: React.FC = () => {
     srtContent: string;
     srtFilename: string;
     modelUsed: string;
+    analysisPartial?: boolean;
+    analysisWarning?: string | null;
   } | null>(null);
+  const [resultView, setResultView] = useState<"srt" | "advice">("srt");
+  const [popupNotice, setPopupNotice] = useState<{ message: string; severity: "success" | "warning" } | null>(null);
   const [copiedSrt, setCopiedSrt] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -104,6 +109,7 @@ export const StudioTab: React.FC = () => {
     if (!selectedFile) return;
     setIsUploading(true);
     setUploadError(null);
+    setPopupNotice(null);
     try {
       const res = await ApiService.uploadStudioVideo(selectedFile, targetLang, voiceTone, customNote);
       setUploadResult({
@@ -111,7 +117,24 @@ export const StudioTab: React.FC = () => {
         srtContent: res.srt_content,
         srtFilename: res.srt_filename,
         modelUsed: res.model_used,
+        analysisPartial: Boolean(res.analysis_partial),
+        analysisWarning: res.analysis_warning || null,
       });
+      setResultView("srt");
+      if (res.srt_content) {
+        ExportService.downloadFile(res.srt_filename, res.srt_content, "application/x-subrip");
+      }
+      if (res.analysis_warning) {
+        setPopupNotice({
+          message: res.analysis_warning,
+          severity: "warning",
+        });
+      } else {
+        setPopupNotice({
+          message: `Đã xuất & tự động tải về file phụ đề ${res.srt_filename} kèm gợi ý đạo diễn CapCut!`,
+          severity: "success",
+        });
+      }
     } catch (err: any) {
       setUploadError(err.message || "Không thể phân tích video tải lên.");
     } finally {
@@ -422,27 +445,54 @@ export const StudioTab: React.FC = () => {
                 </Box>
               ) : (
                 <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1.5 }}>
+                  <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: "center", mb: 1.5, flexWrap: "wrap" }}>
                     <Chip
-                      label={`Model: ${uploadResult.modelUsed || "Gemini 2.5"}`}
+                      label={`Model: ${uploadResult.modelUsed || "Gemini Flash"}`}
                       size="small"
                       sx={{ bgcolor: "rgba(48, 209, 88, 0.15)", color: APPLE_PALETTE.success, fontWeight: 600 }}
                     />
-                    <Chip label="Đã tạo .SRT chuẩn CapCut" size="small" sx={{ bgcolor: APPLE_PALETTE.tile2, color: "#ffffff" }} />
+                    <Chip
+                      label="Phụ đề .SRT (Chuẩn CapCut)"
+                      size="small"
+                      onClick={() => setResultView("srt")}
+                      sx={{
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        bgcolor: resultView === "srt" ? APPLE_PALETTE.actionBlue : APPLE_PALETTE.tile2,
+                        color: "#ffffff",
+                      }}
+                    />
+                    <Chip
+                      label={uploadResult.analysisPartial ? "Mẹo dựng nhanh" : "Gợi ý Đạo diễn CapCut"}
+                      size="small"
+                      onClick={() => setResultView("advice")}
+                      sx={{
+                        cursor: "pointer",
+                        fontWeight: 600,
+                        bgcolor: resultView === "advice" ? APPLE_PALETTE.actionBlue : APPLE_PALETTE.tile2,
+                        color: "#ffffff",
+                      }}
+                    />
                   </Stack>
 
-                  {/* SRT Preview Content */}
+                  {uploadResult.analysisWarning && (
+                    <Alert severity="warning" sx={{ mb: 1.5, borderRadius: "12px", fontSize: "0.8rem" }}>
+                      {uploadResult.analysisWarning}
+                    </Alert>
+                  )}
+
+                  {/* SRT or Editing Advice Content */}
                   <TextField
                     fullWidth
                     multiline
                     rows={10}
-                    value={uploadResult.srtContent}
+                    value={resultView === "srt" ? uploadResult.srtContent : uploadResult.advice}
                     slotProps={{ input: { readOnly: true } }}
                     sx={{
                       mb: 2,
                       "& .MuiOutlinedInput-root": {
-                        fontFamily: "monospace",
-                        fontSize: "0.8rem",
+                        fontFamily: resultView === "srt" ? "monospace" : "inherit",
+                        fontSize: "0.82rem",
                         bgcolor: "#0a0a0c",
                       },
                     }}
@@ -673,6 +723,22 @@ export const StudioTab: React.FC = () => {
           </Grid>
         </Grid>
       )}
+
+      <Snackbar
+        open={Boolean(popupNotice)}
+        autoHideDuration={7000}
+        onClose={() => setPopupNotice(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setPopupNotice(null)}
+          severity={popupNotice?.severity || "info"}
+          variant="filled"
+          sx={{ width: "100%", borderRadius: "12px", fontWeight: 600 }}
+        >
+          {popupNotice?.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

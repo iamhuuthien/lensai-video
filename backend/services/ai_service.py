@@ -55,7 +55,6 @@ PRIORITY_PRO_MODELS: List[str] = [
 # Dòng FLASH: Tốc độ cao, tối ưu chi phí & hạn ngạch (cho người dùng Dùng thử / Free)
 FALLBACK_FLASH_MODELS: List[str] = [
     "gemini-2.5-flash",
-    "gemini-2.0-flash",
 ]
 
 # Cache danh sách model theo từng API key, và thời điểm model được dùng lại sau khi bị lỗi.
@@ -264,9 +263,9 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
         ordered.append(pref)
 
     if pref == "flash" or "flash" in pref:
-        ordered += flash_models + FALLBACK_FLASH_MODELS + lite_models + pro_models + PRIORITY_PRO_MODELS
+        ordered += flash_models + lite_models + FALLBACK_FLASH_MODELS
     else:
-        ordered += pro_models + PRIORITY_PRO_MODELS + flash_models + FALLBACK_FLASH_MODELS + lite_models
+        ordered += pro_models + PRIORITY_PRO_MODELS + flash_models + lite_models + FALLBACK_FLASH_MODELS
 
     combined: List[str] = []
     for candidate in ordered:
@@ -282,7 +281,7 @@ def _discover_ranked_models(client: genai.Client, preference: Optional[str] = No
 
 
 def _cooldown_seconds_for(err: Exception) -> int:
-    """404/403 hoặc limit: 0 = model không dùng được với key này (lâu dài); 429 = tạm hết quota."""
+    """404/403 hoặc limit: 0 = model không dùng được với key này (lâu dài); 429 = tạm hết quota theo phút."""
     code = getattr(err, "code", None) or getattr(err, "status_code", None)
     msg = str(err).upper()
     if (
@@ -295,7 +294,7 @@ def _cooldown_seconds_for(err: Exception) -> int:
     ):
         return 3600
     if code == 429 or "429" in msg or "RESOURCE_EXHAUSTED" in msg or "QUOTA" in msg:
-        return 300
+        return 12
     return 0
 
 
@@ -415,6 +414,7 @@ def _generate_with_best_model(
     usable_models = usable_models[:6]
 
     last_err: Optional[Exception] = None
+    quota_err: Optional[Exception] = None
     for model_name in usable_models:
         try:
             logger.info(f"Đang phân tích video với model: {model_name}")
@@ -428,13 +428,31 @@ def _generate_with_best_model(
         except Exception as err:
             last_err = err
             cooldown = _cooldown_seconds_for(err)
+            if cooldown == 12:
+                quota_err = err
             if cooldown:
                 with _state_lock:
                     _MODEL_COOLDOWN[(key_id, model_name)] = time.time() + cooldown
             logger.warning(f"Model {model_name} không khả dụng ({err}), tự động chuyển sang model tiếp theo...")
 
-    if last_err:
-        raise RuntimeError(format_user_ai_error(last_err)) from last_err
+    # Nếu chỉ bị kẹt 429 theo phút tạm thời, nghỉ ngắn 2s rồi thử lại model khả dụng đầu tiên
+    if quota_err and usable_models:
+        time.sleep(2.0)
+        retry_model = usable_models[0]
+        try:
+            response = client.models.generate_content(
+                model=retry_model,
+                contents=contents,
+                config=config,
+            )
+            text = response.text or "Không nhận được phản hồi từ AI."
+            return text, retry_model
+        except Exception as err:
+            quota_err = err
+
+    final_err = quota_err or last_err
+    if final_err:
+        raise RuntimeError(format_user_ai_error(final_err)) from final_err
     raise RuntimeError("Không tìm thấy model Gemini khả dụng.")
 
 

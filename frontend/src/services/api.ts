@@ -283,6 +283,8 @@ export const ApiService = {
     editing_advice: string;
     srt_filename: string;
     srt_content: string;
+    analysis_partial?: boolean;
+    analysis_warning?: string | null;
     pro_status?: any;
     trial_status?: any;
   }> {
