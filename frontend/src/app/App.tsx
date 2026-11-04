@@ -161,6 +161,7 @@ export const App: React.FC = () => {
           onRefreshTrial={billing.refreshTrialStatus}
           currentUser={auth.user}
           onUserLogin={auth.login}
+          onGoogleLogin={auth.loginWithGoogle}
         />
       ) : (
         <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column", bgcolor: "#000000" }}>
@@ -297,6 +298,7 @@ export const App: React.FC = () => {
             onClearError={() => auth.setError(null)}
             onLogin={auth.login}
             onRegister={auth.register}
+            onGoogleLogin={auth.loginWithGoogle}
             onLogout={auth.logout}
             onRefreshMe={auth.refreshMe}
             onRefreshTrial={billing.refreshTrialStatus}

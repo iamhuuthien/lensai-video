@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { UserProfile } from "../models/types";
 import { ApiService } from "../services/api";
+import { signInWithFirebaseGoogle } from "../services/firebaseAuth";
 import { StorageService } from "../services/storage";
 
 export function useAuthController(onSessionChange?: () => void) {
@@ -83,6 +84,29 @@ export function useAuthController(onSessionChange?: () => void) {
     }
   };
 
+  const loginWithGoogle = async (): Promise<UserProfile> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const idToken = await signInWithFirebaseGoogle();
+      StorageService.setAuthToken(idToken);
+      const res = await ApiService.startAuthSession(idToken);
+      setUser(res.user);
+      setProStatus(res.pro_status || null);
+      if (res.pro_status?.code) {
+        StorageService.setVipCode(res.pro_status.code);
+      }
+      onSessionChange?.();
+      return res.user;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Đăng nhập Google thất bại.";
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = () => {
     StorageService.setAuthToken("");
     setUser(null);
@@ -101,6 +125,7 @@ export function useAuthController(onSessionChange?: () => void) {
     refreshMe,
     login,
     register,
+    loginWithGoogle,
     logout,
   };
 }

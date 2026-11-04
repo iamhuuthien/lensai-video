@@ -689,4 +689,13 @@ export const ApiService = {
       body: JSON.stringify({ device_id: deviceId || StorageService.getDeviceId() }),
     });
   },
+
+  async adminRotateSecret(
+    adminSecret?: string
+  ): Promise<{ status: string; new_secret: string }> {
+    return request("/api/pro/admin/rotate-secret", {
+      method: "POST",
+      headers: adminHeaders(adminSecret),
+    });
+  },
 };

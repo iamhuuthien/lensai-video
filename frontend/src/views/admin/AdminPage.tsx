@@ -60,7 +60,29 @@ interface AdminPageProps {
   onRefreshTrial: () => void;
   currentUser: UserProfile | null;
   onUserLogin: (email: string, password: string) => Promise<UserProfile>;
+  onGoogleLogin?: () => Promise<UserProfile>;
 }
+
+const GoogleGIcon: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="#EA4335"
+      d="M12 10.2v3.9h5.5c-.24 1.26-.96 2.33-2.05 3.05l3.3 2.56c1.93-1.78 3.05-4.4 3.05-7.56 0-.72-.06-1.42-.19-2.09H12z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 22c2.75 0 5.06-.91 6.75-2.46l-3.3-2.56c-.91.61-2.08.98-3.45.98-2.65 0-4.9-1.79-5.7-4.2l-3.41 2.64C4.57 19.74 8.01 22 12 22z"
+    />
+    <path
+      fill="#4A90E2"
+      d="M6.3 13.76A5.98 5.98 0 0 1 6 12c0-.61.11-1.2.3-1.76L2.89 7.6A9.96 9.96 0 0 0 2 12c0 1.61.39 3.14 1.07 4.49l3.23-2.73z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M12 5.98c1.5 0 2.84.52 3.9 1.53l2.92-2.92C17.05 2.94 14.75 2 12 2 8.01 2 4.57 4.26 2.89 7.6l3.41 2.64c.8-2.41 3.05-4.26 5.7-4.26z"
+    />
+  </svg>
+);
 
 export const AdminPage: React.FC<AdminPageProps> = ({
   onBackToApp,
@@ -68,6 +90,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   onRefreshTrial,
   currentUser,
   onUserLogin,
+  onGoogleLogin,
 }) => {
   const [adminSecret, setAdminSecret] = useState<string>(() => StorageService.getAdminSecret());
   const [showSecret, setShowSecret] = useState<boolean>(false);
@@ -179,6 +202,50 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       await loadAllDashboardData("");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Đăng nhập tài khoản Admin thất bại.");
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleAdminLogin = async () => {
+    if (!onGoogleLogin) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const logged = await onGoogleLogin();
+      if (!logged.is_admin && logged.role !== "admin") {
+        setError(
+          `Tài khoản Google (${logged.email}) đã đăng nhập thành công nhưng chưa có quyền ADMIN. Bạn hãy dùng Mã Bảo Mật (Tab 1) hoặc tài khoản admin@lensai.vn để nâng quyền ADMIN cho ${logged.email} trong tab Quản lý Người dùng!`
+        );
+        setLoading(false);
+        return;
+      }
+      await loadAllDashboardData("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Đăng nhập Google thất bại.");
+      setLoading(false);
+    }
+  };
+
+  const handleRotateSecret = async () => {
+    setLoading(true);
+    setError(null);
+    setSuccessMsg(null);
+    try {
+      const res = await ApiService.adminRotateSecret(adminSecret);
+      const nextSecret = res.new_secret;
+      setAdminSecret(nextSecret);
+      StorageService.setAdminSecret(nextSecret);
+      try {
+        await navigator.clipboard.writeText(nextSecret);
+      } catch {
+        // ignore clipboard failure
+      }
+      setSuccessMsg(
+        `Đã cấp mới Mã Bảo Mật Admin (X-Admin-Secret): ${nextSecret} (Đã tự động lưu phiên & sao chép vào bộ nhớ tạm — hãy lưu lại mã này!)`
+      );
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Không thể cấp mới mã bảo mật Admin.");
+    } finally {
       setLoading(false);
     }
   };
@@ -617,6 +684,28 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   >
                     {loading ? <CircularProgress size={20} color="inherit" /> : "Đăng nhập bằng Tài khoản Admin"}
                   </Button>
+                  {onGoogleLogin && (
+                    <Button
+                      type="button"
+                      variant="outlined"
+                      size="large"
+                      disabled={loading}
+                      startIcon={<GoogleGIcon />}
+                      onClick={handleGoogleAdminLogin}
+                      sx={{
+                        py: 1.2,
+                        borderRadius: "12px",
+                        bgcolor: "#ffffff",
+                        color: "#111111",
+                        borderColor: "#ffffff",
+                        fontWeight: 700,
+                        textTransform: "none",
+                        "&:hover": { bgcolor: "#f2f2f7", borderColor: "#f2f2f7" },
+                      }}
+                    >
+                      Đăng nhập Admin bằng Google (Firebase Auth)
+                    </Button>
+                  )}
                 </Box>
               )}
 
@@ -831,6 +920,15 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       sx={{ bgcolor: "#30d158", color: "#000", fontWeight: 700, "&:hover": { bgcolor: "#28b84c" } }}
                     >
                       Tạo & Kích Hoạt Ngay Mã VIP Test Trên Trình Duyệt Này
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      startIcon={<KeyIcon />}
+                      onClick={handleRotateSecret}
+                      disabled={loading}
+                    >
+                      Đổi / Cấp Mới Mã Bảo Mật Admin (X-Admin-Secret)
                     </Button>
                   </Box>
                 </Paper>

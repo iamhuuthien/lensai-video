@@ -46,11 +46,33 @@ interface AuthDialogProps {
   onClearError: () => void;
   onLogin: (email: string, password: string) => Promise<UserProfile>;
   onRegister: (email: string, password: string, displayName: string) => Promise<UserProfile>;
+  onGoogleLogin?: () => Promise<UserProfile>;
   onLogout: () => void;
   onRefreshMe: () => Promise<UserProfile | null>;
   onRefreshTrial: () => void;
   onOpenAdminPage: () => void;
 }
+
+const GoogleGIcon: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      fill="#EA4335"
+      d="M12 10.2v3.9h5.5c-.24 1.26-.96 2.33-2.05 3.05l3.3 2.56c1.93-1.78 3.05-4.4 3.05-7.56 0-.72-.06-1.42-.19-2.09H12z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 22c2.75 0 5.06-.91 6.75-2.46l-3.3-2.56c-.91.61-2.08.98-3.45.98-2.65 0-4.9-1.79-5.7-4.2l-3.41 2.64C4.57 19.74 8.01 22 12 22z"
+    />
+    <path
+      fill="#4A90E2"
+      d="M6.3 13.76A5.98 5.98 0 0 1 6 12c0-.61.11-1.2.3-1.76L2.89 7.6A9.96 9.96 0 0 0 2 12c0 1.61.39 3.14 1.07 4.49l3.23-2.73z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M12 5.98c1.5 0 2.84.52 3.9 1.53l2.92-2.92C17.05 2.94 14.75 2 12 2 8.01 2 4.57 4.26 2.89 7.6l3.41 2.64c.8-2.41 3.05-4.26 5.7-4.26z"
+    />
+  </svg>
+);
 
 export const AuthDialog: React.FC<AuthDialogProps> = ({
   open,
@@ -62,6 +84,7 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({
   onClearError,
   onLogin,
   onRegister,
+  onGoogleLogin,
   onLogout,
   onRefreshMe,
   onRefreshTrial,
@@ -279,6 +302,52 @@ export const AuthDialog: React.FC<AuthDialogProps> = ({
               <Tab label="Đăng nhập" />
               <Tab label="Tạo tài khoản mới" />
             </Tabs>
+
+            {onGoogleLogin && (
+              <>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  size="large"
+                  fullWidth
+                  disabled={loading}
+                  startIcon={<GoogleGIcon />}
+                  onClick={async () => {
+                    setLocalError(null);
+                    setLocalSuccess(null);
+                    onClearError();
+                    try {
+                      const gUser = await onGoogleLogin();
+                      setLocalSuccess(`Đã đăng nhập Google thành công: ${gUser.email}`);
+                    } catch {
+                      // handled via error prop
+                    }
+                  }}
+                  sx={{
+                    mb: 2,
+                    py: 1.2,
+                    borderRadius: "12px",
+                    bgcolor: "#ffffff",
+                    color: "#111111",
+                    borderColor: "#ffffff",
+                    fontWeight: 700,
+                    textTransform: "none",
+                    "&:hover": {
+                      bgcolor: "#f2f2f7",
+                      borderColor: "#f2f2f7",
+                    },
+                  }}
+                >
+                  Tiếp tục nhanh bằng Google (Firebase Auth)
+                </Button>
+
+                <Divider sx={{ mb: 2, borderColor: APPLE_PALETTE.hairline }}>
+                  <Typography variant="caption" sx={{ color: APPLE_PALETTE.inkMuted }}>
+                    hoặc dùng Email & Mật khẩu
+                  </Typography>
+                </Divider>
+              </>
+            )}
 
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {tab === 1 && (
