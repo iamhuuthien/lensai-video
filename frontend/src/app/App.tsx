@@ -11,6 +11,7 @@ import { ResultBento } from "../views/analyze/ResultBento";
 import { ChatSection } from "../views/analyze/ChatSection";
 import { StudioTab } from "../views/studio/StudioTab";
 import { FreeHubTab } from "../views/freehub/FreeHubTab";
+import { ChannelIntelligenceTab } from "../views/channel/ChannelIntelligenceTab";
 import { SettingsDialog } from "../views/dialogs/SettingsDialog";
 import { ShortcutDialog } from "../views/dialogs/ShortcutDialog";
 import { PricingDialog } from "../views/dialogs/PricingDialog";
@@ -255,6 +256,15 @@ export const App: React.FC = () => {
 
               {/* Tab 2: Free Tools Hub */}
               {activeTab === 2 && <FreeHubTab />}
+
+              {/* Tab 3: Multi-Platform Channel & Competitor Intelligence */}
+              {activeTab === 3 && (
+                <ChannelIntelligenceTab
+                  onOpenPricing={() => billing.setPricingOpen(true)}
+                  onSwitchToStudio={() => setActiveTab(1)}
+                  onRefreshTrial={billing.refreshTrialStatus}
+                />
+              )}
             </Container>
           </Box>
 

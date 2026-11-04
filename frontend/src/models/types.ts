@@ -132,3 +132,180 @@ export interface AuthConfig {
   } | null;
 }
 
+export interface ChannelPostItem {
+  id: string;
+  title: string;
+  description: string;
+  url: string;
+  duration: number;
+  views: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  upload_date: string;
+  hashtags: string[];
+  pillar: string;
+  pillar_label: string;
+  duration_tier: string;
+  engagement_rate: number;
+  weighted_engagement_rate: number;
+  outlier_ratio: number;
+  share_to_like_pct: number;
+  comment_to_like_pct: number;
+}
+
+export interface ChannelPillarItem {
+  pillar: string;
+  label: string;
+  count: number;
+  percentage: number;
+  avg_views: number;
+  avg_engagement_rate: number;
+  lift_vs_median: number;
+}
+
+export interface ChannelScorecardItem {
+  key: string;
+  score: number;
+  benchmark: string;
+  current: string;
+  insight: string;
+}
+
+export interface ChannelQuantMetrics {
+  platform: "tiktok" | "facebook" | "youtube";
+  handle: string;
+  channel_title: string;
+  subscribers: number;
+  bio: string;
+  data_source: string;
+  sample_size: number;
+  total_views: number;
+  mean_views: number;
+  median_views: number;
+  max_views: number;
+  min_views: number;
+  avg_engagement_rate: number;
+  avg_weighted_engagement_rate: number;
+  avg_share_to_like_pct: number;
+  avg_comment_to_like_pct: number;
+  posting_cadence_per_week: number;
+  momentum_pct: number;
+  momentum_status: "rising" | "stable" | "declining";
+  momentum_label: string;
+  channel_health_score: number;
+  optimal_duration_tier: string;
+  best_pillar: ChannelPillarItem | null;
+  short_form_ratio_pct: number;
+  external_link_violations: number;
+  pillar_distribution: ChannelPillarItem[];
+  duration_breakdown: Array<{
+    tier: string;
+    count: number;
+    percentage: number;
+    avg_views: number;
+    avg_engagement_rate: number;
+  }>;
+  viral_outliers: ChannelPostItem[];
+  hidden_gems: ChannelPostItem[];
+  underperforming_flops: ChannelPostItem[];
+  top_hashtags: Array<{
+    tag: string;
+    count: number;
+    avg_views: number;
+    lift_ratio: number;
+  }>;
+  platform_scorecards: {
+    tiktok: ChannelScorecardItem[];
+    facebook: ChannelScorecardItem[];
+    youtube: ChannelScorecardItem[];
+  };
+  posts: ChannelPostItem[];
+}
+
+export interface HeadToHeadComparison {
+  page_a_name: string;
+  page_b_name: string;
+  page_a_handle: string;
+  page_b_handle: string;
+  wins_a: number;
+  wins_b: number;
+  overall_winner: string;
+  verdict: string;
+  metrics_table: Array<{
+    metric: string;
+    page_a_value: string;
+    page_b_value: string;
+    winner: "A" | "B" | "tie";
+    winner_name: string;
+    gap_pct: number;
+  }>;
+  content_gaps: Array<{
+    pillar: string;
+    label: string;
+    page_a_share_pct: number;
+    page_b_share_pct: number;
+    page_a_avg_views: number;
+    page_b_avg_views: number;
+    advantage: string;
+  }>;
+}
+
+export interface NextVideoScriptItem {
+  episode: number;
+  title: string;
+  pillar: string;
+  platform_fit: string;
+  hook_3s: string;
+  body_outline: string;
+  cta: string;
+  capcut_script: string;
+}
+
+export interface ChannelAuditResult {
+  audit_id: string;
+  created_at: string;
+  platform: "tiktok" | "facebook" | "youtube";
+  mode: "single_channel" | "head_to_head";
+  cached?: boolean;
+  resource_status: {
+    youtube_api_configured: boolean;
+    apify_token_configured: boolean;
+    ytdlp_enabled: boolean;
+    data_source_used: string;
+  };
+  primary_channel: ChannelQuantMetrics;
+  secondary_channel?: ChannelQuantMetrics | null;
+  head_to_head?: HeadToHeadComparison | null;
+  strategy: {
+    positioning: {
+      core_niche: string;
+      audience_persona: string;
+      brand_voice: string;
+      pillar_assessment: string;
+    };
+    content_trends: {
+      momentum_diagnosis: string;
+      winning_topics: string;
+      fatigue_warning: string;
+    };
+    platform_keys_analysis: {
+      tiktok_key: string;
+      facebook_key: string;
+      youtube_key: string;
+    };
+    strengths: string[];
+    weaknesses: string[];
+    action_plan_30d: string[];
+    competitor_strategy?: {
+      headline: string;
+      why_winner_leads: string;
+      page_a_counter_attack: string[];
+    } | null;
+    next_5_video_scripts: NextVideoScriptItem[];
+    model_used: string;
+    raw_markdown: string;
+  };
+}
+
+

@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.controllers import (
     analysis_controller,
+    channel_controller,
     chat_controller,
     media_controller,
     system_controller,
@@ -78,7 +79,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    for module in (system_controller, analysis_controller, chat_controller, media_controller):
+    for module in (system_controller, analysis_controller, channel_controller, chat_controller, media_controller):
         app.include_router(module.router)
 
     # Optional private extension (billing, credits, ...). No-op when it is not installed.

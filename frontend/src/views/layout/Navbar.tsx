@@ -15,6 +15,7 @@ import {
 import MovieFilterIcon from "@mui/icons-material/MovieFilter";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CardGiftcardIcon from "@mui/icons-material/CardGiftcard";
+import InsightsIcon from "@mui/icons-material/Insights";
 import DiamondIcon from "@mui/icons-material/Diamond";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 import AppleIcon from "@mui/icons-material/Apple";
@@ -117,6 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Tab icon={<MovieFilterIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Phân tích Video" />
             <Tab icon={<AutoAwesomeIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Studio CapCut" />
             <Tab icon={<CardGiftcardIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Free Hub 0đ" />
+            <Tab icon={<InsightsIcon sx={{ fontSize: 18 }} />} iconPosition="start" label="Phân tích Kênh" />
           </Tabs>
         )}
 
@@ -278,6 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Tab icon={<MovieFilterIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Phân tích" />
           <Tab icon={<AutoAwesomeIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Studio" />
           <Tab icon={<CardGiftcardIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Free 0đ" />
+          <Tab icon={<InsightsIcon sx={{ fontSize: 16 }} />} iconPosition="start" label="Kênh" />
         </Tabs>
       )}
     </AppBar>

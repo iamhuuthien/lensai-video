@@ -28,3 +28,18 @@ class ShortcutRequest(BaseModel):
     prompt: Optional[str] = None
     api_key: Optional[str] = None
     model: Optional[str] = None
+
+
+class ChannelAnalyzeRequest(BaseModel):
+    primary_url: str
+    secondary_url: Optional[str] = None
+    platform: Optional[str] = "auto"
+    sample_urls: Optional[list[str]] = None
+    secondary_sample_urls: Optional[list[str]] = None
+    sample_limit: int = 20
+    focus_goal: Optional[str] = "comprehensive"
+    api_key: Optional[str] = None
+    model: Optional[str] = None
+    url: Optional[str] = None
+    session_id: Optional[str] = None
+

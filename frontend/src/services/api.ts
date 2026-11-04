@@ -2,6 +2,7 @@ import type {
   AnalysisMode,
   AnalysisResult,
   AuthConfig,
+  ChannelAuditResult,
   Order,
   Plan,
   SystemFeatures,
@@ -697,5 +698,44 @@ export const ApiService = {
       method: "POST",
       headers: adminHeaders(adminSecret),
     });
+  },
+
+  async analyzeChannel(payload: {
+    primary_url: string;
+    secondary_url?: string;
+    platform?: string;
+    sample_urls?: string[];
+    secondary_sample_urls?: string[];
+    sample_limit?: number;
+    focus_goal?: string;
+  }): Promise<ChannelAuditResult> {
+    const apiKey = StorageService.getApiKey();
+    const model = StorageService.getSelectedModel();
+    return request<ChannelAuditResult>("/api/channel/analyze", {
+      method: "POST",
+      body: JSON.stringify({
+        ...payload,
+        api_key: apiKey || undefined,
+        model: model || undefined,
+      }),
+    });
+  },
+
+  async getChannelPresets(): Promise<{
+    presets: Array<{
+      id: string;
+      label: string;
+      platform: string;
+      primary_url: string;
+      secondary_url: string;
+      description: string;
+    }>;
+    resource_status: {
+      youtube_api_configured: boolean;
+      apify_token_configured: boolean;
+      ytdlp_enabled: boolean;
+    };
+  }> {
+    return request("/api/channel/presets");
   },
 };
