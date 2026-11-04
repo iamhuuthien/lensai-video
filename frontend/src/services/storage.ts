@@ -3,8 +3,42 @@ const STORAGE_KEY_VIP = "lensai_vip_code";
 const STORAGE_KEY_DEVICE = "lensai_device_id";
 const STORAGE_KEY_HISTORY = "lensai_video_history";
 const STORAGE_KEY_MODEL = "lensai_selected_model";
+const STORAGE_KEY_AUTH_TOKEN = "lensai_auth_token";
+const SESSION_KEY_ADMIN_SECRET = "lensai_admin_session_secret";
 
 export const StorageService = {
+  getAuthToken(): string {
+    return localStorage.getItem(STORAGE_KEY_AUTH_TOKEN) || "";
+  },
+
+  setAuthToken(token: string): void {
+    if (token && token.trim()) {
+      localStorage.setItem(STORAGE_KEY_AUTH_TOKEN, token.trim());
+    } else {
+      localStorage.removeItem(STORAGE_KEY_AUTH_TOKEN);
+    }
+  },
+
+  getAdminSecret(): string {
+    try {
+      return sessionStorage.getItem(SESSION_KEY_ADMIN_SECRET) || "";
+    } catch {
+      return "";
+    }
+  },
+
+  setAdminSecret(secret: string): void {
+    try {
+      if (secret && secret.trim()) {
+        sessionStorage.setItem(SESSION_KEY_ADMIN_SECRET, secret.trim());
+      } else {
+        sessionStorage.removeItem(SESSION_KEY_ADMIN_SECRET);
+      }
+    } catch {
+      // ignore session storage errors
+    }
+  },
+
   getDeviceId(): string {
     let id = localStorage.getItem(STORAGE_KEY_DEVICE);
     if (!id || id.length < 8) {

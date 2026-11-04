@@ -22,19 +22,24 @@ Tài liệu này mô tả **cấu hình biến môi trường bảo mật**, **h
 
 ---
 
-## 2. Cách Mở Bảng Điều Khiển Admin (Admin & QA Test Center)
+## 2. Cách Mở Trang Quản Trị Riêng Biệt (Dedicated Admin Page — `/admin`)
 
-Để đảm bảo an toàn trên môi trường Production, nút mở **Admin & QA Test Center** được ẩn hoàn toàn khỏi người dùng thông thường và chỉ kích hoạt khi Quản trị viên thực hiện một trong hai cách sau:
+Từ phiên bản 6.0, bảng điều khiển Admin đã được nâng cấp thành **Trang Quản Trị Độc Lập Toàn Màn Hình (`AdminPage`)** thay vì hộp thoại popup cũ. Quản trị viên có thể mở trang Admin theo một trong 4 cách sau:
 
-1. **Phím tắt bàn phím**: Nhấn tổ hợp phím **`Ctrl + Shift + A`** (hoặc **`Cmd + Shift + A`** trên macOS) tại bất kỳ màn hình nào.
-2. **Tham số URL**: Truy cập đường dẫn kèm `?admin=1` (ví dụ: `https://your-domain.com/?admin=1`).
+1. **Truy cập trực tiếp đường dẫn**: `https://your-domain.com/admin` (hoặc `https://your-domain.com/?admin=1`).
+2. **Phím tắt bàn phím**: Nhấn tổ hợp phím **`Ctrl + Shift + A`** (hoặc **`Cmd + Shift + A`** trên macOS) để chuyển đổi nhanh giữa ứng dụng chính và trang `/admin`.
+3. **Từ Tài Khoản Người Dùng**: Nhấn nút **Đăng nhập** trên thanh Navbar -> chọn **Mở Trang Admin (`/admin`)**.
+4. **Tự động hiển thị**: Khi đăng nhập bằng tài khoản có vai trò `ADMIN`, biểu tượng khiên vàng trên Navbar sẽ dẫn thẳng tới `/admin`.
 
-Sau khi hộp thoại mở ra:
-- Nhập giá trị của biến môi trường `LENSAI_ADMIN_SECRET` vào ô mật khẩu (kiểu `password` ẩn ký tự, chỉ lưu tạm trong `sessionStorage` của tab hiện tại và tự xóa khi đóng tab).
-- Nhấn **Đăng nhập / Làm mới** để truy cập 3 phân khu:
-  - **Tab 1 — Tổng quan & Công cụ Test (QA Sandbox)**: Xem trạng thái kết nối Firestore, doanh thu tháng, ước tính thuế và nút **Reset 3 Link + 1 SRT Dùng Thử** cho thiết bị hiện tại.
-  - **Tab 2 — Quản lý Mã VIP (`Passes`)**: Tạo mã VIP mới, khóa/mở khóa mã VIP tức thì.
-  - **Tab 3 — Đơn hàng VietQR (`Orders`)**: Xem danh sách đơn hàng và duyệt thủ công/giả lập thanh toán SePay chỉ với 1 cú nhấp chuột.
+### Hai Phương Thức Đăng Nhập Trang Admin:
+- **Phương thức 1 — Mã Bảo Mật Khẩn Cấp (`X-Admin-Secret`)**: Nhập mã bảo mật Admin (lưu trong biến môi trường `LENSAI_ADMIN_SECRET` hoặc băm `PBKDF2-HMAC-SHA256` trong Firestore `_system_config/admin_auth`). Hệ thống tự động `.trim()` khoảng trắng thừa khi sao chép/dán.
+- **Phương thức 2 — Tài Khoản Admin (`Email & Mật khẩu`)**: Đăng nhập bằng tài khoản người dùng đã được nâng quyền `ADMIN` trong tab **Quản Lý Người Dùng** hoặc nằm trong danh sách `LENSAI_ADMIN_EMAILS`.
+
+### 4 Phân Khu Quản Trị Trên Trang `/admin`:
+- **Tab 1 — Tổng Quan & Biểu Đồ KPI**: 4 thẻ KPI (Tổng User, VIP Pass, Đơn VietQR, Lợi nhuận ròng sau thuế), biểu đồ đăng ký 30 ngày, doanh thu 6 tháng và khu vực **QA Test Center** (1-click Reset hạn mức thiết bị & tạo mã VIP test).
+- **Tab 2 — Quản Lý Người Dùng (`lensai_users`)**: Tìm kiếm theo email, nâng/hạ quyền `ADMIN`, khóa/mở khóa tài khoản, thu hồi phiên đăng nhập và cấp trực tiếp mã VIP Pass vào tài khoản người dùng.
+- **Tab 3 — VIP Pass, Đơn Hàng VietQR & Báo Cáo Thuế**: Tạo mã VIP tùy chỉnh, duyệt đơn VietQR 1-click, khóa/mở khóa mã VIP và xem báo cáo thuế HKD VN (GTGT 5% + TNCN 2%).
+- **Tab 4 — Nhật Ký Bảo Mật ISO/IEC 27001 (`lensai_audit_logs`)**: Theo dõi thời gian thực mọi hành động nhạy cảm (`auth.signup`, `admin.login`, `pass.create`, `pass.grant`, `user.suspend`, `user.role_change`, `account.export`, `account.delete`).
 
 ---
 

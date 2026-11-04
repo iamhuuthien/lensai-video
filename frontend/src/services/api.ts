@@ -1,10 +1,12 @@
 import type {
   AnalysisMode,
   AnalysisResult,
+  AuthConfig,
   Order,
   Plan,
   SystemFeatures,
   TrialStatus,
+  UserProfile,
 } from "../models/types";
 import { StorageService } from "./storage";
 
@@ -20,9 +22,15 @@ function notifyTrialExhausted(message: string): void {
   trialListeners.forEach((l) => l(message));
 }
 
+function adminHeaders(adminSecret?: string): Record<string, string> {
+  const clean = (adminSecret ?? StorageService.getAdminSecret()).trim();
+  return clean ? { "X-Admin-Secret": clean } : {};
+}
+
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const deviceId = StorageService.getDeviceId();
   const vipCode = StorageService.getVipCode();
+  const authToken = StorageService.getAuthToken();
   const headers = new Headers(options.headers || {});
 
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
@@ -31,6 +39,9 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   headers.set("X-Device-Id", deviceId);
   if (vipCode) {
     headers.set("X-VIP-Code", vipCode);
+  }
+  if (authToken && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${authToken}`);
   }
 
   // Sync with global window.LensAI
@@ -290,6 +301,7 @@ export const ApiService = {
   }> {
     const deviceId = StorageService.getDeviceId();
     const vipCode = StorageService.getVipCode();
+    const authToken = StorageService.getAuthToken();
     const headers: Record<string, string> = {
       "X-Device-Id": deviceId,
       "X-Filename": encodeURIComponent(file.name),
@@ -298,6 +310,7 @@ export const ApiService = {
       "X-Custom-Note": encodeURIComponent(note),
     };
     if (vipCode) headers["X-VIP-Code"] = vipCode;
+    if (authToken) headers["Authorization"] = `Bearer ${authToken}`;
 
     const res = await fetch("/api/pro/upload-studio", {
       method: "POST",
@@ -380,7 +393,141 @@ export const ApiService = {
     }
   },
 
-  async getAdminOverview(adminSecret: string): Promise<{
+  // ---- Authentication & User Account (/api/auth/* & /api/me*) ----
+  async getAuthConfig(): Promise<AuthConfig> {
+    return request<AuthConfig>("/api/auth/config");
+  },
+
+  async registerAccount(payload: {
+    email: string;
+    password: string;
+    display_name?: string;
+  }): Promise<{
+    status: string;
+    token: string;
+    user: UserProfile;
+    is_vip: boolean;
+    pro_status?: any;
+    trial_status?: any;
+    adopted_history?: number;
+  }> {
+    return request("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async loginAccount(payload: {
+    email: string;
+    password: string;
+  }): Promise<{
+    status: string;
+    token: string;
+    user: UserProfile;
+    is_vip: boolean;
+    pro_status?: any;
+    trial_status?: any;
+    adopted_history?: number;
+  }> {
+    return request("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async startAuthSession(idToken?: string): Promise<{
+    status: string;
+    user: UserProfile;
+    is_vip: boolean;
+    pro_status?: any;
+    trial_status?: any;
+    created?: boolean;
+    adopted_history?: number;
+  }> {
+    return request("/api/auth/session", {
+      method: "POST",
+      headers: idToken ? { Authorization: `Bearer ${idToken}` } : undefined,
+    });
+  },
+
+  async getMe(): Promise<{
+    status: string;
+    user: UserProfile;
+    is_vip: boolean;
+    pro_status?: any;
+    trial_status?: any;
+  }> {
+    return request("/api/me");
+  },
+
+  async patchProfile(payload: { display_name?: string; locale?: "vi" | "en" }): Promise<{
+    status: string;
+    user: UserProfile;
+    is_vip: boolean;
+    pro_status?: any;
+  }> {
+    return request("/api/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async redeemPassToAccount(code: string): Promise<{
+    status: string;
+    message: string;
+    user: UserProfile;
+    is_vip: boolean;
+    pro_status?: any;
+  }> {
+    return request("/api/me/redeem-pass", {
+      method: "POST",
+      body: JSON.stringify({ code: code.trim().toUpperCase() }),
+    });
+  },
+
+  async getMyOrders(): Promise<{ status: string; orders: any[] }> {
+    return request("/api/me/orders");
+  },
+
+  async exportMyData(): Promise<{ status: string; data: any }> {
+    return request("/api/me/export");
+  },
+
+  async deleteMyAccount(confirmEmail: string): Promise<{ status: string; erased: any }> {
+    return request("/api/me", {
+      method: "DELETE",
+      body: JSON.stringify({ confirm_email: confirmEmail }),
+    });
+  },
+
+  // ---- Admin Dashboard (/api/pro/admin/*) ----
+  async getAdminMe(adminSecret?: string): Promise<{
+    status: string;
+    admin: { uid: string; email: string; break_glass: boolean };
+  }> {
+    return request("/api/pro/admin/me", {
+      headers: adminHeaders(adminSecret),
+    });
+  },
+
+  async getAdminStats(adminSecret?: string): Promise<{
+    status: string;
+    storage_backend: string;
+    stats: {
+      users: { total: number; new_7d: number; new_30d: number; suspended: number; admins: number };
+      passes: { total: number; active: number; claimed: number };
+      orders: { total: number; pending: number; paid: number };
+      signups_by_day: Array<{ date: string; count: number }>;
+      revenue_by_month: Array<{ month: string; gross_revenue_vnd: number; net_profit_vnd: number; total_tax_vnd: number; orders: number }>;
+      tax_current_month: any;
+    };
+  }> {
+    return request("/api/pro/admin/stats", {
+      headers: adminHeaders(adminSecret),
+    });
+  },
+
+  async getAdminOverview(adminSecret?: string): Promise<{
     status: string;
     storage_backend: string;
     passes: any[];
@@ -388,7 +535,110 @@ export const ApiService = {
     tax_report: any;
   }> {
     return request("/api/pro/admin/overview", {
-      headers: { "X-Admin-Secret": adminSecret },
+      headers: adminHeaders(adminSecret),
+    });
+  },
+
+  async getAdminUsers(
+    params: { limit?: number; after?: number; q?: string } = {},
+    adminSecret?: string
+  ): Promise<{
+    status: string;
+    items: UserProfile[];
+    next_after?: number | null;
+    total: number;
+  }> {
+    const qs = new URLSearchParams();
+    if (params.limit) qs.set("limit", String(params.limit));
+    if (params.after) qs.set("after", String(params.after));
+    if (params.q) qs.set("q", params.q.trim());
+    const suffix = qs.toString() ? `?${qs.toString()}` : "";
+    return request(`/api/pro/admin/users${suffix}`, {
+      headers: adminHeaders(adminSecret),
+    });
+  },
+
+  async getAdminUserDetail(
+    uid: string,
+    adminSecret?: string
+  ): Promise<{
+    status: string;
+    user: UserProfile;
+    consent: any;
+    identity_provider: any;
+    passes: any[];
+    orders: any[];
+    history_count: number;
+  }> {
+    return request(`/api/pro/admin/users/${encodeURIComponent(uid)}`, {
+      headers: adminHeaders(adminSecret),
+    });
+  },
+
+  async adminSetUserStatus(
+    uid: string,
+    status: "active" | "suspended",
+    adminSecret?: string
+  ): Promise<{ status: string; user: UserProfile }> {
+    return request(`/api/pro/admin/users/${encodeURIComponent(uid)}/status`, {
+      method: "POST",
+      headers: adminHeaders(adminSecret),
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  async adminSetUserRole(
+    uid: string,
+    role: "user" | "admin",
+    adminSecret?: string
+  ): Promise<{ status: string; user: UserProfile }> {
+    return request(`/api/pro/admin/users/${encodeURIComponent(uid)}/role`, {
+      method: "POST",
+      headers: adminHeaders(adminSecret),
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  async adminRevokeUserSessions(uid: string, adminSecret?: string): Promise<{ status: string }> {
+    return request(`/api/pro/admin/users/${encodeURIComponent(uid)}/revoke-sessions`, {
+      method: "POST",
+      headers: adminHeaders(adminSecret),
+    });
+  },
+
+  async adminGrantUserPass(
+    uid: string,
+    payload: { plan_id: string; custom_credits?: number; custom_days?: number; note?: string },
+    adminSecret?: string
+  ): Promise<{ status: string; pass: any }> {
+    return request(`/api/pro/admin/users/${encodeURIComponent(uid)}/grant-pass`, {
+      method: "POST",
+      headers: adminHeaders(adminSecret),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async getAdminAuditLogs(
+    limit: number = 50,
+    adminSecret?: string
+  ): Promise<{
+    status: string;
+    items: Array<{
+      id: string;
+      ts: number;
+      iso: string;
+      action: string;
+      actor_uid: string;
+      actor_email: string;
+      target_type: string;
+      target_id: string;
+      outcome: string;
+      ip: string;
+      meta: Record<string, any>;
+    }>;
+  }> {
+    return request(`/api/pro/admin/audit?limit=${limit}`, {
+      headers: adminHeaders(adminSecret),
     });
   },
 
@@ -404,7 +654,7 @@ export const ApiService = {
   ): Promise<{ status: string; pass: any }> {
     return request("/api/pro/admin/create-pass", {
       method: "POST",
-      headers: { "X-Admin-Secret": adminSecret },
+      headers: adminHeaders(adminSecret),
       body: JSON.stringify(payload),
     });
   },
@@ -412,7 +662,7 @@ export const ApiService = {
   async adminTogglePass(adminSecret: string, code: string, active: boolean): Promise<{ status: string; pass: any }> {
     return request("/api/pro/admin/toggle-pass", {
       method: "POST",
-      headers: { "X-Admin-Secret": adminSecret },
+      headers: adminHeaders(adminSecret),
       body: JSON.stringify({ code, active }),
     });
   },
@@ -424,7 +674,7 @@ export const ApiService = {
   ): Promise<{ status: string; message: string; order: any }> {
     return request("/api/pro/admin/confirm-order", {
       method: "POST",
-      headers: { "X-Admin-Secret": adminSecret },
+      headers: adminHeaders(adminSecret),
       body: JSON.stringify({ order_code: orderCode, transfer_amount: transferAmount }),
     });
   },
@@ -435,7 +685,7 @@ export const ApiService = {
   ): Promise<{ status: string; device_id: string; trial_status: any }> {
     return request("/api/pro/admin/reset-trial", {
       method: "POST",
-      headers: { "X-Admin-Secret": adminSecret },
+      headers: adminHeaders(adminSecret),
       body: JSON.stringify({ device_id: deviceId || StorageService.getDeviceId() }),
     });
   },

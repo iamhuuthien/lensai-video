@@ -30,6 +30,18 @@ describe("StorageService Legacy Migration", () => {
     expect(history[1]).toBe("https://www.youtube.com/watch?v=abc");
     expect(history[2]).toBe("https://www.instagram.com/reel/xyz");
   });
+
+  it("stores and clears auth tokens and session-scoped admin secrets safely", () => {
+    StorageService.setAuthToken("  jwt.token.value  ");
+    expect(StorageService.getAuthToken()).toBe("jwt.token.value");
+    StorageService.setAuthToken("");
+    expect(StorageService.getAuthToken()).toBe("");
+
+    StorageService.setAdminSecret("  Adm-TestSecret  ");
+    expect(StorageService.getAdminSecret()).toBe("Adm-TestSecret");
+    StorageService.setAdminSecret("");
+    expect(StorageService.getAdminSecret()).toBe("");
+  });
 });
 
 describe("FreeToolsService", () => {

@@ -104,3 +104,31 @@ export interface ViralHookTemplate {
   framework: string;
   example: string;
 }
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  email_verified: boolean;
+  display_name: string;
+  photo_url?: string;
+  role: "user" | "admin";
+  status: "active" | "suspended";
+  locale?: string;
+  providers?: string[];
+  created_iso?: string;
+  last_login_iso?: string;
+  login_count?: number;
+  is_admin?: boolean;
+}
+
+export interface AuthConfig {
+  enabled: boolean;
+  providers: string[];
+  web: {
+    apiKey: string;
+    authDomain: string;
+    projectId: string;
+    appId: string;
+  } | null;
+}
+

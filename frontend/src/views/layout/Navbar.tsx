@@ -21,7 +21,8 @@ import AppleIcon from "@mui/icons-material/Apple";
 import TuneIcon from "@mui/icons-material/Tune";
 import AdminPanelSettingsIcon from "@mui/icons-material/AdminPanelSettings";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
-import type { TrialStatus } from "../../models/types";
+import PersonIcon from "@mui/icons-material/Person";
+import type { TrialStatus, UserProfile } from "../../models/types";
 import { APPLE_PALETTE } from "../../theme/theme";
 
 interface NavbarProps {
@@ -29,9 +30,11 @@ interface NavbarProps {
   onTabChange: (tab: number) => void;
   trialStatus: TrialStatus | null;
   isVip: boolean;
+  user?: UserProfile | null;
   onOpenPricing: () => void;
   onOpenSettings: () => void;
   onOpenShortcut: () => void;
+  onOpenAuth?: () => void;
   onOpenAdmin?: () => void;
 }
 
@@ -40,9 +43,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onTabChange,
   trialStatus,
   isVip,
+  user,
   onOpenPricing,
   onOpenSettings,
   onOpenShortcut,
+  onOpenAuth,
   onOpenAdmin,
 }) => {
   const theme = useTheme();
@@ -173,6 +178,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isVip ? "Gói VIP" : "Nâng cấp"}
           </Button>
 
+          {/* User Account / Sign In */}
+          {onOpenAuth && (
+            <Button
+              size="small"
+              variant={user ? "contained" : "outlined"}
+              startIcon={<PersonIcon sx={{ fontSize: 17 }} />}
+              onClick={onOpenAuth}
+              sx={{
+                fontSize: "0.78rem",
+                py: 0.55,
+                px: 1.4,
+                borderRadius: "10px",
+                textTransform: "none",
+                fontWeight: 600,
+                bgcolor: user ? "rgba(41, 151, 255, 0.16)" : "transparent",
+                color: user ? "#ffffff" : "#d1d1d6",
+                borderColor: user ? "rgba(41, 151, 255, 0.4)" : APPLE_PALETTE.hairlineStrong,
+                "&:hover": {
+                  bgcolor: "rgba(41, 151, 255, 0.24)",
+                  borderColor: APPLE_PALETTE.skyLink,
+                },
+              }}
+            >
+              {user ? (user.display_name || user.email.split("@")[0]).slice(0, 14) : "Đăng nhập"}
+            </Button>
+          )}
+
           {/* iOS Shortcut */}
           <IconButton
             size="small"
@@ -187,12 +219,12 @@ export const Navbar: React.FC<NavbarProps> = ({
             <AppleIcon sx={{ fontSize: 18 }} />
           </IconButton>
 
-          {/* Admin & QA Portal */}
+          {/* Dedicated Admin Page Portal */}
           {onOpenAdmin && (
             <IconButton
               size="small"
               onClick={onOpenAdmin}
-              title="Admin & QA Test Center"
+              title="Mở Trang Quản Trị Admin (/admin)"
               sx={{
                 color: "#ffd60a",
                 border: "1px solid rgba(255, 214, 10, 0.35)",

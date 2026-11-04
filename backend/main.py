@@ -44,6 +44,8 @@ def _mount_frontend(app: FastAPI) -> None:
         app.mount("/assets", ImmutableStaticFiles(directory=dist / "assets"), name="assets")
 
     @app.get("/", include_in_schema=False)
+    @app.get("/admin", include_in_schema=False)
+    @app.get("/admin/", include_in_schema=False)
     async def serve_index():
         if not index.is_file():
             return HTMLResponse(_FRONTEND_MISSING, status_code=503)
